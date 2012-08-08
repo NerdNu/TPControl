@@ -1,0 +1,21 @@
+ask-expire: 60
+save-interval: 300
+default-mode: ask
+min-group: user
+groups:
+- user
+- mod
+- admin
+permissions:
+   allow:
+      friends: allow
+      default: allow
+      blocked: deny
+   ask:
+      friends: allow
+      default: ask
+      blocked: deny
+   deny:
+      friends: ask
+      default: deny
+      blocked: deny

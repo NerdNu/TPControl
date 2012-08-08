@@ -1,0 +1,43 @@
+name: TPControl
+version: 0.1
+author: Barney Gale
+main: nu.nerd.tpcontrol.TPControl
+permissions:
+    tpcontrol.level.*:
+        description: Teleport user class.
+description: 
+    Simple, configurable, tiered teleport plugin with allow/ask/deny modes.
+commands:
+    tp:
+        description: Teleport to another player
+        usage: |
+           /tp <player> - teleport to another player
+    tpmode:
+        description: Restrict who can teleport to you
+        usage: |
+            /tpmode - show current mode
+            /tpmode allow|ask|deny - change mode
+    tpallow:
+        description: Accept a teleport request
+        usage: |
+            /tpallow - accepts most recent teleport request
+    tpdeny:
+        description: Denies a teleport request
+        usage: |
+            /tpdeny - denies most recent teleport request
+    tpfriend:
+        description: Add a player to your teleport whitelist
+        usage: |
+            /tpfriend <player> - adds given player to whitelist
+    tpunfriend:
+        description: Removes a player from your teleport whitelist
+        usage: |
+            /tpunfriend <player> - removes given player from whitelist
+    tpblock:
+        description: Add a player to your teleport blacklist
+        usage: |
+            /tpblock <player> - adds given player to blacklist
+    tpunblock:
+        description: Removes a player from your teleport blocklist
+        usage: |
+            /tpunblock <player> - removes given player from blacklist
