@@ -88,7 +88,7 @@ public class TPControl extends JavaPlugin {
         	
         	if (mode.equals("allow")) {
         		messagePlayer(p1, "Teleporting you to " + p2.getName() + ".");
-        		p1.teleport(p2);
+        		teleport(p1, p2);
         	} 
         	else if (mode.equals("ask")) {
         		u2.lodgeRequest(p1);
@@ -97,6 +97,44 @@ public class TPControl extends JavaPlugin {
         		messagePlayer(p1, p2.getName() + " has teleportation disabled.");
         	}
         	return true;
+        }
+        //
+        // /tphere <player>
+        //
+        else if (command.getName().equalsIgnoreCase("tphere")) {
+        	if (!(sender instanceof Player)) {
+        		sender.sendMessage("This cannot be run from the console!");
+        		return true;
+        	}
+        	
+        	
+        	Player p2 = (Player)sender;
+        	
+        	if(!canTP(p2)) {
+        		messagePlayer(p2, "You do not have permission.");
+        		return true;
+        	}
+        	
+        	if(args.length != 1) {
+        		messagePlayer(p2, "Usage: /tphere <player>");
+        		return true;
+        	}
+        	
+        	Player p1 = getServer().getPlayer(args[0]);
+        	if(p1 == null) {
+        		messagePlayer(p2, "Couldn't find player "+ args[0]);
+        		return true;
+        	}
+        	
+        	if(canTP(p2) && canOverride(p2, p1)) {
+        		messagePlayer(p1, p2.getName() + " teleported you to them.");
+        		messagePlayer(p2, "Teleporting " + p1.getName() + " to you.");
+        		teleport(p1, p2);
+        		return true;
+        	} else {
+        		messagePlayer(p2, "You do not have permission.");
+        		return true;
+        	}
         }
         //
         // /tpmode allow|ask|deny
@@ -167,7 +205,7 @@ public class TPControl extends JavaPlugin {
         	u2.last_applicant = null;
         	messagePlayer(p1, "Teleporting you to " + p2.getName() + ".");
         	messagePlayer(p2, "Teleporting " + p1.getName() + " to you.");
-        	p1.teleport(p2);
+        	teleport(p1, p2);
         	
         	
         	return true;
@@ -353,5 +391,12 @@ public class TPControl extends JavaPlugin {
 	
 	public void messagePlayer(Player p, String m) {
 		p.sendMessage(ChatColor.GRAY + "[TP] " + ChatColor.WHITE + m);
+	}
+	
+	private void teleport(Player p1, Player p2) {
+		p1.teleport(p2.getLocation());
+		if (p2.isFlying()) {
+			p1.setFlying(true);
+		}
 	}
 }

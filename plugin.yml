@@ -12,6 +12,10 @@ commands:
         description: Teleport to another player
         usage: |
            /tp <player> - teleport to another player
+    tphere:
+        description: Teleport another player to you
+        usage: |
+           /tp <player> - teleport another player to you
     tpmode:
         description: Restrict who can teleport to you
         usage: |
