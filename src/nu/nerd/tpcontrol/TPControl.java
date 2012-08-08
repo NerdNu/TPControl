@@ -219,7 +219,7 @@ public class TPControl extends JavaPlugin {
         	
         	User u2 = getUser(p2);
         	if(args.length != 1) {
-        		messagePlayer(p2, "Usage: /tpunfriend <player>");
+        		messagePlayer(p2, "Usage: /tpfriend <player>");
         		return true;
         	}
         	if(u2.addFriend(args[0])) {
