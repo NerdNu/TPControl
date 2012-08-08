@@ -7,15 +7,15 @@ groups:
 - mod
 - admin
 permissions:
-   allow:
-      friends: allow
-      default: allow
-      blocked: deny
-   ask:
-      friends: allow
-      default: ask
-      blocked: deny
-   deny:
-      friends: ask
-      default: deny
-      blocked: deny
+    allow:
+        friends: allow
+        default: allow
+        blocked: deny
+    ask:
+        friends: allow
+        default: ask
+        blocked: deny
+    deny:
+        friends: ask
+        default: deny
+        blocked: deny
