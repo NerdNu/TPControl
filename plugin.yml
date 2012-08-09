@@ -1,6 +1,7 @@
 name: TPControl
-version: 0.1
-author: Barney Gale
+version: ${project.version}
+description: ${project.description}
+author: [Barney Gale, Deaygo]
 main: nu.nerd.tpcontrol.TPControl
 permissions:
     tpcontrol.level.*:

@@ -50,6 +50,25 @@ public class TPControl extends JavaPlugin {
         log.info("TPControl has been disabled.");
     }
     
+    public Player getPlayer(String name) {
+        Player[] players = getServer().getOnlinePlayers();
+
+        Player found = null;
+        String lowerName = name.toLowerCase();
+        int delta = Integer.MAX_VALUE;
+        for (Player player : players) {
+            if (ChatColor.stripColor(player.getName()).toLowerCase().startsWith(lowerName)) {
+                int curDelta = player.getName().length() - lowerName.length();
+                if (curDelta < delta) {
+                    found = player;
+                    delta = curDelta;
+                }
+                if (curDelta == 0) break;
+            }
+        }
+        return found;
+    }
+    
     public boolean onCommand(CommandSender sender, Command command, String name, String[] args) {
         //
         // /tp
@@ -70,7 +89,7 @@ public class TPControl extends JavaPlugin {
                 return true;
             }
             
-            Player p2 = getServer().getPlayer(args[0]);
+            Player p2 = getPlayer(args[0]);
             if(p2 == null) {
                 messagePlayer(p1, "Couldn't find player "+ args[0]);
                 return true;
@@ -120,7 +139,7 @@ public class TPControl extends JavaPlugin {
                 return true;
             }
             
-            Player p1 = getServer().getPlayer(args[0]);
+            Player p1 = getPlayer(args[0]);
             if(p1 == null) {
                 messagePlayer(p2, "Couldn't find player "+ args[0]);
                 return true;
@@ -195,7 +214,7 @@ public class TPControl extends JavaPlugin {
             }
             
             
-            Player p1 = getServer().getPlayer(u2.last_applicant);
+            Player p1 = getPlayer(u2.last_applicant);
             
             if(p1 == null) {
                 messagePlayer(p2, "Error: "+u2.last_applicant+" is no longer online.");
