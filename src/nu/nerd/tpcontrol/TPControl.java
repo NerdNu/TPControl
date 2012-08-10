@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.logging.Logger;
 
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -69,6 +71,7 @@ public class TPControl extends JavaPlugin {
         return found;
     }
     
+    @Override
     public boolean onCommand(CommandSender sender, Command command, String name, String[] args) {
         //
         // /tp
@@ -115,6 +118,49 @@ public class TPControl extends JavaPlugin {
             else if (mode.equals("deny")) {
                 messagePlayer(p1, p2.getName() + " has teleportation disabled.");
             }
+            return true;
+        }
+        //
+        // /tppos [world] x y z
+        //
+        else if (command.getName().equalsIgnoreCase("tppos")) {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage("This cannot be run from the console!");
+                return true;
+            }
+            
+            if (args.length < 3 || args.length > 4) {
+                sender.sendMessage("Invalid paramaters. Syntax: /tppos [world] x y z");
+                return true;
+            }
+            
+            Player p = (Player)sender;
+            World w = null;
+            if (args.length == 4) {
+                w = getServer().getWorld(args[0]);
+                args = new String[] { args[1], args[2], args[3] };
+                if (w == null) {
+                    sender.sendMessage(ChatColor.RED + "An invalid world was provided.");
+                    return true;
+                }
+            }
+            else {
+                w = p.getWorld();
+            }
+            
+            double x, y, z;
+            
+            try {
+                x = Double.parseDouble(args[0]);
+                y = Double.parseDouble(args[1]);
+                z = Double.parseDouble(args[2]);
+            } catch (NumberFormatException ex) {
+                sender.sendMessage("Invalid paramaters. Syntax: /tppos [world] x y z");
+                return true;
+            }
+            
+            p.teleport(new Location(w, x, y, z));
+            
             return true;
         }
         //
@@ -398,11 +444,11 @@ public class TPControl extends JavaPlugin {
     
     private boolean canTP(Player p1) {
         for(String g : config.GROUPS) {
-            if(g.equals(config.MIN_GROUP)) {
+            if(g.equals(config.MIN_GROUP) && p1.hasPermission("tpcontrol.level."+g)) {
                 return true;
             }
             else if(p1.hasPermission("tpcontrol.level."+g)) {
-                return false;
+                return true;
             }
         }
         return false;

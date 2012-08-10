@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Date;
 import java.util.List;
+import org.bukkit.ChatColor;
 
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -143,7 +144,7 @@ public class User {
     
     //For 'ask' mode:
     public void lodgeRequest(Player applicant) {
-        String username = applicant.getName().toLowerCase();
+        String username = ChatColor.stripColor(applicant.getName()).toLowerCase();
         Date t = new Date();
         if(username.equals(last_applicant) && t.getTime() < last_applicant_time + 1000L*plugin.config.ASK_EXPIRE) {
             plugin.messagePlayer(applicant, "Don't spam /tp!");

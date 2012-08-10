@@ -6,6 +6,8 @@ main: nu.nerd.tpcontrol.TPControl
 permissions:
     tpcontrol.level.*:
         description: Teleport user class.
+    tpcontrol.tppos:
+        description: Allows a player to use tppos
 description: 
     Simple, configurable, tiered teleport plugin with allow/ask/deny modes.
 commands:
@@ -13,10 +15,15 @@ commands:
         description: Teleport to another player
         usage: |
            /tp <player> - teleport to another player
+    tppos:
+        description: Teleport to a position
+        usage: |
+           /tppos [<world>] <x> <y> <z> - teleport to location
+        permission: tpcontrol.tppos
     tphere:
         description: Teleport another player to you
         usage: |
-           /tp <player> - teleport another player to you
+           /tphere <player> - teleport another player to you
     tpmode:
         description: Restrict who can teleport to you
         usage: |
