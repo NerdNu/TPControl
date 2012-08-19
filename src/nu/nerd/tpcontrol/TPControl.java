@@ -6,13 +6,21 @@ import java.util.logging.Logger;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.block.Sign;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.plugin.PluginManager;
 
-public class TPControl extends JavaPlugin {
+public class TPControl extends JavaPlugin implements Listener {
     Logger log = Logger.getLogger("Minecraft");
     
     
@@ -21,12 +29,12 @@ public class TPControl extends JavaPlugin {
     
     private HashMap<String,User> user_cache = new HashMap<String, User>();
     
-    
-    
-    
-    
+    @Override
     public void onEnable(){
         log = this.getLogger();
+        //Listen to events
+        PluginManager pm = getServer().getPluginManager();
+	pm.registerEvents(this, this);
         
         //Load config
         File config_file = new File(getDataFolder(), "config.yml");
@@ -48,6 +56,7 @@ public class TPControl extends JavaPlugin {
         log.info("TPControl has been enabled!");
     }
     
+    @Override
     public void onDisable(){
         log.info("TPControl has been disabled.");
     }
@@ -69,6 +78,40 @@ public class TPControl extends JavaPlugin {
             }
         }
         return found;
+    }
+    
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onPlayerInteract(PlayerInteractEvent event) { 
+        if (event.getClickedBlock() == null || event.getAction() != Action.RIGHT_CLICK_BLOCK) {
+            return;
+        }
+        if (event.getClickedBlock().getType() == Material.WALL_SIGN) {
+            Sign s = (Sign) event.getClickedBlock().getState();
+            Player p = event.getPlayer();
+            if (event.getItem() != null && event.getItem().getType() == Material.DIAMOND_HOE) {
+                // Registering a sign
+                if (s.getLines().length > 1) {
+                    if (!s.getLine(0).isEmpty() && p.hasPermission("tpcontrol.level.admin") && s.getLine(0).equalsIgnoreCase("[WARP]")) {
+                        s.setLine(3, ChatColor.GREEN + "." + ChatColor.BLACK);
+                        s.update();
+                        p.sendMessage("Warp sign created.");
+                        return;
+                    }
+                }
+            }
+            if (s.getLines().length > 1) {
+                if (!s.getLine(3).isEmpty() && s.getLine(3).equalsIgnoreCase(ChatColor.GREEN + "." + ChatColor.BLACK)) {
+                    if (!s.getLine(1).isEmpty() && s.getLine(1).matches("\\s*-*\\d+\\s*,\\s*-*\\d+\\s*,\\s*-*\\d+\\s*")) {
+                        String[] sCo = s.getLine(1).split(",");
+                        // Change our strings to ints, remember to remove spaces because people can be stupid about fomatting
+                        Location tp = new Location(p.getWorld(), Integer.parseInt(sCo[0].trim()), Integer.parseInt(sCo[1].trim()), Integer.parseInt(sCo[2].trim()));
+                        p.teleport(tp);
+                    } else {
+                        p.sendMessage("Warp sign incorrect.");
+                    }
+                }
+            }
+        }
     }
     
     @Override
