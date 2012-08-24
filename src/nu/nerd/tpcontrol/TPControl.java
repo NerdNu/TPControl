@@ -223,10 +223,10 @@ public class TPControl extends JavaPlugin {
                                     !args[0].equals("ask") &&
                                     !args[0].equals("deny"))) {
                 p2.sendMessage(ChatColor.RED + "Usage: /tpmode allow|ask|deny");
-                p2.sendMessage(ChatColor.GOLD + "You are currently in *" + u2.getMode().toUpperCase() + "* mode.");
+                p2.sendMessage(ChatColor.GOLD + "You are currently in " + u2.getMode().toUpperCase() + " mode.");
             } else {
                 u2.setMode(args[0]);
-                p2.sendMessage(ChatColor.GOLD + "You are now in *" + args[0].toUpperCase() + "* mode.");
+                p2.sendMessage(ChatColor.GOLD + "You are now in " + args[0].toUpperCase() + " mode.");
             }
             return true;
         }
