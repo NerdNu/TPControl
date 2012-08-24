@@ -83,18 +83,18 @@ public class TPControl extends JavaPlugin {
             }
             Player p1 = (Player)sender;
             if(!canTP(p1)) {
-                sender.sendMessage(ChatColor.RED + "You do not have permission to teleport!");
+                p1.sendMessage(ChatColor.RED + "You do not have permission to teleport!");
                 return true;
             }
             
             if(args.length != 1) {
-                sender.sendMessage(ChatColor.RED + "Usage: /tp <player>");
+                p1.sendMessage(ChatColor.RED + "Usage: /tp <player>");
                 return true;
             }
             
             Player p2 = getPlayer(args[0]);
             if(p2 == null) {
-                sender.sendMessage(ChatColor.RED + "Could not find player " + args[0] "!");
+                p1.sendMessage(ChatColor.RED + "Could not find player " + args[0] "!");
                 return true;
             }
             
@@ -109,14 +109,14 @@ public class TPControl extends JavaPlugin {
             
             
             if (mode.equals("allow")) {
-                sender.sendMessage(ChatColor.GREEN + "Teleporting you to " + p2.getName() + ".");
+                p1.sendMessage(ChatColor.GREEN + "Teleporting you to " + p2.getName() + ".");
                 teleport(p1, p2);
             } 
             else if (mode.equals("ask")) {
                 u2.lodgeRequest(p1);
             } 
             else if (mode.equals("deny")) {
-                sender.sendMessage(ChatColor.RED + p2.getName() + " has teleportation disabled.");
+                p1.sendMessage(ChatColor.RED + p2.getName() + " has teleportation disabled.");
             }
             return true;
         }
@@ -129,18 +129,19 @@ public class TPControl extends JavaPlugin {
                 return true;
             }
             
+            Player p = (Player)sender;
+            
             if (args.length < 3 || args.length > 4) {
-                sender.sendMessage("Invalid paramaters. Syntax: /tppos [world] x y z");
+                p.sendMessage(ChatColor.RED + "Invalid paramaters. Syntax: /tppos [world] x y z");
                 return true;
             }
             
-            Player p = (Player)sender;
             World w = null;
             if (args.length == 4) {
                 w = getServer().getWorld(args[0]);
                 args = new String[] { args[1], args[2], args[3] };
                 if (w == null) {
-                    sender.sendMessage(ChatColor.RED + "An invalid world was provided.");
+                    p.sendMessage(ChatColor.RED + "An invalid world was provided.");
                     return true;
                 }
             }
@@ -155,7 +156,7 @@ public class TPControl extends JavaPlugin {
                 y = Double.parseDouble(args[1]);
                 z = Double.parseDouble(args[2]);
             } catch (NumberFormatException ex) {
-                sender.sendMessage("Invalid paramaters. Syntax: /tppos [world] x y z");
+                p.sendMessage(ChatColor.RED + "Invalid paramaters. Syntax: /tppos [world] x y z");
                 return true;
             }
             
@@ -176,28 +177,28 @@ public class TPControl extends JavaPlugin {
             Player p2 = (Player)sender;
             
             if(!canTP(p2)) {
-                messagePlayer(p2, "You do not have permission.");
+                p2.sendMessage(ChatColor.RED + "You do not have permission!");
                 return true;
             }
             
             if(args.length != 1) {
-                messagePlayer(p2, "Usage: /tphere <player>");
+                p2.sendMessage(ChatColor.RED + "Usage: /tphere <player>");
                 return true;
             }
             
             Player p1 = getPlayer(args[0]);
             if(p1 == null) {
-                messagePlayer(p2, "Couldn't find player "+ args[0]);
+                p2.sendMessage(ChatColor.RED + "Couldn't find player " + args[0] + ".");
                 return true;
             }
             
             if(canTP(p2) && canOverride(p2, p1)) {
-                messagePlayer(p1, p2.getName() + " teleported you to them.");
-                messagePlayer(p2, "Teleporting " + p1.getName() + " to you.");
+                p1.sendMessage(ChatColor.GREEN + p2.getName() + " teleported you to them.");
+                p2.sendMessage(ChatColor.GREEN + "Teleporting " + p1.getName() + " to you.");
                 teleport(p1, p2);
                 return true;
             } else {
-                messagePlayer(p2, "You do not have permission.");
+                p2.sendMessage(ChatColor.RED + "You do not have permission!");
                 return true;
             }
         }
@@ -212,7 +213,7 @@ public class TPControl extends JavaPlugin {
             Player p2 = (Player)sender;
             
             if(!canTP(p2)) {
-                messagePlayer(p2, "You do not have permission.");
+                p2.sendMessage(ChatColor.RED + "You do not have permission!");
                 return true;
             }
             
@@ -221,11 +222,11 @@ public class TPControl extends JavaPlugin {
             if(args.length != 1 || (!args[0].equals("allow") &&
                                     !args[0].equals("ask") &&
                                     !args[0].equals("deny"))) {
-                messagePlayer(p2, "Usage: /tpmode allow|ask|deny");
-                messagePlayer(p2, "Your are currently in *" + u2.getMode() + "* mode.");
+                p2.sendMessage(ChatColor.RED + "Usage: /tpmode allow|ask|deny");
+                p2.sendMessage(ChatColor.GOLD + "Your are currently in *" + u2.getMode() + "* mode.");
             } else {
                 u2.setMode(args[0]);
-                messagePlayer(p2, "You are now in *"+args[0]+"* mode.");
+                p2.sendMessage(ChatColor.GOLD + "You are now in *" + args[0] + "* mode.");
             }
             return true;
         }
@@ -240,7 +241,7 @@ public class TPControl extends JavaPlugin {
             Player p2 = (Player)sender;
             
             if(!canTP(p2)) {
-                messagePlayer(p2, "You do not have permission.");
+                p2.sendMessage(ChatColor.RED + "You do not have permission!");
                 return true;
             }
             
@@ -248,14 +249,14 @@ public class TPControl extends JavaPlugin {
 
             //Check the field exists...
             if(u2.last_applicant == null) {
-                messagePlayer(p2, "Error: No one has attempted to tp to you lately!");
+                p2.sendMessage(ChatColor.RED + "Error: No one has attempted to tp to you lately!");
                 return true;
             }
             
             //Check it hasn't expired
             Date t = new Date();
             if(t.getTime() > u2.last_applicant_time + 1000L*config.ASK_EXPIRE) {
-                messagePlayer(p2, "Error: /tp request has expired!");
+                p2.sendMessage(ChatColor.RED + "Error: /tp request has expired!");
                 return true;
             }
             
@@ -263,13 +264,13 @@ public class TPControl extends JavaPlugin {
             Player p1 = getPlayer(u2.last_applicant);
             
             if(p1 == null) {
-                messagePlayer(p2, "Error: "+u2.last_applicant+" is no longer online.");
+                p2.sendMessage(ChatColor.RED + "Error: " + u2.last_applicant + " is no longer online.");
                 return true;
             }
             
             u2.last_applicant = null;
-            messagePlayer(p1, "Teleporting you to " + p2.getName() + ".");
-            messagePlayer(p2, "Teleporting " + p1.getName() + " to you.");
+            p1.sendMessage(ChatColor.GREEN + "Teleporting you to " + p2.getName() + ".");
+            p2.sendMessage(ChatColor.GREEN + "Teleporting " + p1.getName() + " to you.");
             teleport(p1, p2);
             
             
@@ -287,20 +288,20 @@ public class TPControl extends JavaPlugin {
             Player p2 = (Player)sender;
             
             if(!canTP(p2)) {
-                messagePlayer(p2, "You do not have permission.");
+                p2.sendMessage(ChatColor.RED + "You do not have permission!");
                 return true;
             }
             
             User u2 = getUser(p2);
 
             if(u2.last_applicant == null) {
-                messagePlayer(p2, "Error: No one has attempted to tp to you lately!");
+                p2.sendMessage(ChatColor.RED + "Error: No one has attempted to tp to you lately!");
                 return true;
             }
             
             
-            messagePlayer(p2, "Denied a request from "+u2.last_applicant+".");
-            messagePlayer(p2, "Use '/tpblock "+u2.last_applicant+"' to block further requests");
+            p2.sendMessage(ChatColor.RED + "Denied" + ChatColor.GOLD + " a request from " + u2.last_applicant + ".");
+            p2.sendMessage(ChatColor.GOLD + "Use '/tpblock " + u2.last_applicant + "' to block further requests");
             u2.last_applicant = null;
             
             return true;
@@ -316,19 +317,19 @@ public class TPControl extends JavaPlugin {
             Player p2 = (Player)sender;
             
             if(!canTP(p2)) {
-                messagePlayer(p2, "You do not have permission.");
+                p2.sendMessage(ChatColor.RED + "You do not have permission!");
                 return true;
             }
             
             User u2 = getUser(p2);
             if(args.length != 1) {
-                messagePlayer(p2, "Usage: /tpfriend <player>");
+                p2.sendMessage(ChatColor.RED + "Usage: /tpfriend <player>");
                 return true;
             }
             if(u2.addFriend(args[0])) {
-                messagePlayer(p2, args[0] + " added as a friend.");
+                p2.sendMessage(ChatColor.GREEN + args[0] + " added as a friend.");
             } else {
-                messagePlayer(p2, "Error: " + args[0] + " is already a friend.");
+                p2.sendMessage(ChatColor.RED + "Error: " + args[0] + " is already a friend.");
             }
             return true;
         }
@@ -344,19 +345,19 @@ public class TPControl extends JavaPlugin {
             Player p2 = (Player)sender;
             
             if(!canTP(p2)) {
-                messagePlayer(p2, "You do not have permission.");
+                p2.sendMessage(ChatColor.RED + "You do not have permission!");
                 return true;
             }
             
             User u2 = getUser(p2);
             if(args.length != 1) {
-                messagePlayer(p2, "Usage: /tpunfriend <player>");
+                p2.sendMessage(ChatColor.RED + "Usage: /tpunfriend <player>");
                 return true;
             }
             if(u2.delFriend(args[0])) {
-                messagePlayer(p2, args[0] + " removed from friends.");
+                p2.sendMessage(ChatColor.GREEN + args[0] + " removed from friends.");
             } else {
-                messagePlayer(p2, "Error: " + args[0] + " not on friends list.");
+                p2.sendMessage(ChatColor.RED + "Error: " + args[0] + " not on friends list.");
             }
             return true;
         }
@@ -371,19 +372,19 @@ public class TPControl extends JavaPlugin {
             Player p2 = (Player)sender;
             
             if(!canTP(p2)) {
-                messagePlayer(p2, "You do not have permission.");
+                p2.sendMessage(ChatColor.RED + "You do not have permission");
                 return true;
             }
             
             User u2 = getUser(p2);
             if(args.length != 1) {
-                messagePlayer(p2, "Usage: /tpblock <player>");
+                p2.sendMessage(ChatColor.RED + "Usage: /tpblock <player>");
                 return true;
             }
             if(u2.addBlocked(args[0])) {
-                messagePlayer(p2, args[0] + " was blocked from teleporting to you.");
+                p2.sendMessage(ChatColor.GOLD + args[0] + " was " + ChatColor.RED + " blocked " + ChatColor.GOLD + "from teleporting to you.");
             } else {
-                messagePlayer(p2, "Error: " + args[0] + " is already blocked.");
+                p2.sendMessage(ChatColor.RED + "Error: " + args[0] + " is already blocked.");
             }
             return true;
         }
@@ -399,19 +400,19 @@ public class TPControl extends JavaPlugin {
             Player p2 = (Player)sender;
             
             if(!canTP(p2)) {
-                messagePlayer(p2, "You do not have permission.");
+                p2.sendMessage(ChatColor.RED + "You do not have permission!");
                 return true;
             }
             
             User u2 = getUser(p2);
             if(args.length != 1) {
-                messagePlayer(p2, "Usage: /tpunblock <player>");
+                p2.sendMessage(ChatColor.RED + "Usage: /tpunblock <player>");
                 return true;
             }
             if(u2.delBlocked(args[0])) {
-                messagePlayer(p2, args[0] + " was unblocked from teleporting to you.");
+                p2.sendMessage(ChatColor.GOLD + args[0] + " was " + ChatColor.GREEN + " unblocked " + ChatColor.GOLD + "from teleporting to you.");
             } else {
-                messagePlayer(p2, "Error: " + args[0] + " is not blocked.");
+                p2.sendMessage(ChatColor.RED + "Error: " + args[0] + " is not blocked.");
             }
             return true;
         }
@@ -452,10 +453,6 @@ public class TPControl extends JavaPlugin {
             }
         }
         return false;
-    }
-    
-    public void messagePlayer(Player p, String m) {
-        p.sendMessage(ChatColor.GRAY + "[TP] " + ChatColor.WHITE + m);
     }
     
     private void teleport(Player p1, Player p2) {
