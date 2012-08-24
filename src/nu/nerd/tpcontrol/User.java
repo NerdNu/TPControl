@@ -144,15 +144,15 @@ public class User {
     
     //For 'ask' mode:
     public void lodgeRequest(Player applicant) {
+        applicant.sendMessage(ChatColor.GOLD + "Lodging a teleportation request...")
         String username = ChatColor.stripColor(applicant.getName()).toLowerCase();
         Date t = new Date();
         if(username.equals(last_applicant) && t.getTime() < last_applicant_time + 1000L*plugin.config.ASK_EXPIRE) {
-            plugin.messagePlayer(applicant, "Don't spam /tp!");
+            applicant.sendMessage(ChatColor.RED + "Don't spam /tp!");
             return;
         }
         last_applicant = username;
         last_applicant_time = t.getTime();
-        plugin.messagePlayer(player, applicant.getName() + " wants to teleport to you. Please use /tpallow or /tpdeny.");
-        
+        player.sendMessage(applicant.getName() + " wants to teleport to you. Please use /tpallow or /tpdeny.");
     }
 }
