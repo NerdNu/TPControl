@@ -94,7 +94,7 @@ public class TPControl extends JavaPlugin {
             
             Player p2 = getPlayer(args[0]);
             if(p2 == null) {
-                p1.sendMessage(ChatColor.RED + "Could not find player " + args[0] "!");
+                p1.sendMessage(ChatColor.RED + "Could not find player " + args[0] + "!");
                 return true;
             }
             
@@ -223,10 +223,10 @@ public class TPControl extends JavaPlugin {
                                     !args[0].equals("ask") &&
                                     !args[0].equals("deny"))) {
                 p2.sendMessage(ChatColor.RED + "Usage: /tpmode allow|ask|deny");
-                p2.sendMessage(ChatColor.GOLD + "Your are currently in *" + u2.getMode() + "* mode.");
+                p2.sendMessage(ChatColor.GOLD + "You are currently in *" + u2.getMode().toUpperCase() + "* mode.");
             } else {
                 u2.setMode(args[0]);
-                p2.sendMessage(ChatColor.GOLD + "You are now in *" + args[0] + "* mode.");
+                p2.sendMessage(ChatColor.GOLD + "You are now in *" + args[0].toUpperCase() + "* mode.");
             }
             return true;
         }
