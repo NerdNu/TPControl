@@ -83,18 +83,18 @@ public class TPControl extends JavaPlugin {
             }
             Player p1 = (Player)sender;
             if(!canTP(p1)) {
-                messagePlayer(p1, "You do not have permission.");
+                sender.sendMessage(ChatColor.RED + "You do not have permission to teleport!");
                 return true;
             }
             
             if(args.length != 1) {
-                messagePlayer(p1, "Usage: /tp <player>");
+                sender.sendMessage(ChatColor.RED + "Usage: /tp <player>");
                 return true;
             }
             
             Player p2 = getPlayer(args[0]);
             if(p2 == null) {
-                messagePlayer(p1, "Couldn't find player "+ args[0]);
+                sender.sendMessage(ChatColor.RED + "Could not find player " + args[0] "!");
                 return true;
             }
             
@@ -109,14 +109,14 @@ public class TPControl extends JavaPlugin {
             
             
             if (mode.equals("allow")) {
-                messagePlayer(p1, "Teleporting you to " + p2.getName() + ".");
+                sender.sendMessage(ChatColor.GREEN + "Teleporting you to " + p2.getName() + ".");
                 teleport(p1, p2);
             } 
             else if (mode.equals("ask")) {
                 u2.lodgeRequest(p1);
             } 
             else if (mode.equals("deny")) {
-                messagePlayer(p1, p2.getName() + " has teleportation disabled.");
+                sender.sendMessage(ChatColor.RED + p2.getName() + " has teleportation disabled.");
             }
             return true;
         }
