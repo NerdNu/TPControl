@@ -152,7 +152,7 @@ public class User {
         }
         last_applicant = username;
         last_applicant_time = t.getTime();
-		plugin.messagePlayer(applicant, "Lodging a request...", 0);
+        plugin.messagePlayer(applicant, "Lodging a request...", 0);
         plugin.messagePlayer(player, applicant.getName() + " wants to teleport to you. Please use /tpallow or /tpdeny.", 0);
         
     }

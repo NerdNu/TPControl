@@ -129,8 +129,8 @@ public class TPControl extends JavaPlugin {
                 return true;
             }
             
-			Player p = (Player)sender;
-			World w = null;
+            Player p = (Player)sender;
+            World w = null;
 
             if (args.length < 3 || args.length > 4) {
                 messagePlayer(p, "Invalid paramaters. Syntax: /tppos [world] x y z", 2);
@@ -223,10 +223,10 @@ public class TPControl extends JavaPlugin {
                                     !args[0].equals("ask") &&
                                     !args[0].equals("deny"))) {
                 messagePlayer(p2, "Usage: /tpmode allow|ask|deny", 0);
-                messagePlayer(p2, "You are currently in *" + u2.getMode() + "* mode.", 0);
+                messagePlayer(p2, "You are currently in " + u2.getMode().toUpperCase() + " mode.", 0);
             } else {
                 u2.setMode(args[0]);
-                messagePlayer(p2, "You are now in *"+args[0]+"* mode.", 0);
+                messagePlayer(p2, "You are now in " + args[0].toUpperCase() + " mode.", 0);
             }
             return true;
         }
@@ -456,14 +456,17 @@ public class TPControl extends JavaPlugin {
     }
     
     public void messagePlayer(Player p, String m, int type) {
-		switch(type) {
-			case 0:
-				p.sendMessage(ChatColor.GRAY + "[TP]" + ChatColor.GOLD + m);
-			case 1:
-				p.sendMessage(ChatColor.GRAY + "[TP]" + ChatColor.GREEN + m);
-			case 2:
-				p.sendMessage(ChatColor.GRAY + "[TP]" + ChatColor.RED + m);
-		}
+        switch(type) {
+            case 0:
+                p.sendMessage(ChatColor.GRAY + "[TP]" + ChatColor.GOLD + m);
+                break;
+            case 1:
+                p.sendMessage(ChatColor.GRAY + "[TP]" + ChatColor.GREEN + m);
+                break;
+            case 2:
+                p.sendMessage(ChatColor.GRAY + "[TP]" + ChatColor.RED + m);
+                break;
+        }
     }
     
     private void teleport(Player p1, Player p2) {
