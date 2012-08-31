@@ -266,10 +266,10 @@ public class TPControl extends JavaPlugin implements Listener {
                                     !args[0].equals("ask") &&
                                     !args[0].equals("deny"))) {
                 messagePlayer(p2, "Usage: /tpmode allow|ask|deny", ChatColor.GOLD);
-                messagePlayer(p2, "Your are currently in *" + u2.getMode() + "* mode.", ChatColor.GOLD);
+                messagePlayer(p2, "You are currently in " + u2.getMode().toUpperCase() + " mode.", ChatColor.GOLD);
             } else {
                 u2.setMode(args[0]);
-                messagePlayer(p2, "You are now in *"+args[0]+"* mode.", ChatColor.GOLD);
+                messagePlayer(p2, "You are now in " + args[0].toUpperCase() + " mode.", ChatColor.GOLD);
             }
             return true;
         }
