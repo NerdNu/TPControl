@@ -17,6 +17,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.PluginManager;
 
@@ -78,6 +79,17 @@ public class TPControl extends JavaPlugin implements Listener {
             }
         }
         return found;
+    }
+    
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerTeleport(PlayerTeleportEvent event) {
+        if (event.isCancelled())
+            return;
+        
+        if (event.getCause() == PlayerTeleportEvent.TeleportCause.PLUGIN || event.getCause() == PlayerTeleportEvent.TeleportCause.COMMAND) {
+            User u = getUser(event.getPlayer());
+            u.setLastLocation(event.getFrom());
+        }
     }
     
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -163,6 +175,27 @@ public class TPControl extends JavaPlugin implements Listener {
                 messagePlayer(p1, p2.getName() + " has teleportation disabled.", ChatColor.RED);
             }
             return true;
+        }
+        //
+        // /back
+        //
+        else if (command.getName().equalsIgnoreCase("back")) {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage("This cannot be run from the console!");
+                return true;
+            }
+            
+            Player p = (Player)sender;
+            User u = getUser(p);
+            
+            Location l = u.getLastLocation();
+            
+            if (l != null) {
+                p.teleport(l);
+            }
+            else {
+                p.sendMessage(ChatColor.RED + "No last location saved for you.");
+            }
         }
         //
         // /tppos [world] x y z
