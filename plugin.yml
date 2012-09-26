@@ -1,7 +1,7 @@
 name: TPControl
 version: ${project.version}
 description: ${project.description}
-author: [Barney Gale, Deaygo, c45y]
+author: [Barney Gale, Deaygo, c45y, Nullsquare]
 main: nu.nerd.tpcontrol.TPControl
 permissions:
     tpcontrol.level.*:
@@ -58,3 +58,35 @@ commands:
         description: Removes a player from your teleport blocklist
         usage: |
             /tpunblock <player> - removes given player from blacklist
+    addwarp:
+        description: Adds a warp to the list
+        usage: |
+            /addwarp <warpname>
+    delwarp:
+        description: Removes a warp from the list
+        usage: |
+            /delwarp <warpname>
+    warp:
+        description: Warp to a specified warp
+        usage: |
+            /warp <warpname>
+    warps:
+        description: List warps
+        usage: |
+            /listwarps
+    addhome:
+        description: Add a personal warp-style home
+        usage: |
+            /addhome <homename>
+    delhome:
+        description: Delete a personal home
+        usage: |
+            /delhome <homename>
+    home:
+        description: Teleport to your given home
+        usage: |
+            /home <homename>
+    homes:
+        description: Show your homes
+        usage: |
+            /homes
