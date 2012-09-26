@@ -15,6 +15,11 @@ commands:
         description: Teleport to another player
         usage: |
            /tp <player> - teleport to another player
+    back:
+        description: Teleport back to your previous location
+        usage: |
+           /back - teleport back to your previous location
+        permission: tpcontrol.back
     tppos:
         description: Teleport to a position
         usage: |

@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -22,6 +23,7 @@ public class User {
     private File prefs_path;
     private YamlConfiguration yaml;
     private boolean dirty = false;
+    private Location lastLocation;
     
     public User (TPControl instance, Player p) {
         //player = instance.getServer().getPlayer(u);
@@ -52,6 +54,17 @@ public class User {
             e.printStackTrace();
         }
         dirty = false;
+    }
+    
+    //
+    // Last Location handling.
+    //
+    public void setLastLocation(Location last) {
+        this.lastLocation = last;
+    }
+    
+    public Location getLastLocation() {
+        return this.lastLocation;
     }
     
     //
