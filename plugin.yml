@@ -1,13 +1,20 @@
 name: TPControl
 version: ${project.version}
 description: ${project.description}
-author: [Barney Gale, Deaygo, c45y, Nullsquare]
+author: [Barney Gale, Deaygo, c45y, 0xElliot]
 main: nu.nerd.tpcontrol.TPControl
 permissions:
     tpcontrol.level.*:
         description: Teleport user class.
     tpcontrol.tppos:
         description: Allows a player to use tppos
+    tpcontrol.warp.admin:
+        description: Allows a player access to all warp commands
+        children:
+            tpcontrol.warp:
+                description: Allows a player access to /warp and /warps
+    tpcontrol.home:
+        description: Allows a player access to all home commands
 description: 
     Simple, configurable, tiered teleport plugin with allow/ask/deny modes.
 commands:
@@ -58,3 +65,43 @@ commands:
         description: Removes a player from your teleport blocklist
         usage: |
             /tpunblock <player> - removes given player from blacklist
+    addwarp:
+        description: Adds a warp to the list
+        permission: tpcontrol.warp.admin
+        usage: |
+            /addwarp <warpname>
+    delwarp:
+        description: Removes a warp from the list
+        permission: tpcontrol.warp.admin
+        usage: |
+            /delwarp <warpname>
+    warp:
+        description: Warp to a specified warp
+        permission: tpcontrol.warp
+        usage: |
+            /warp <warpname>
+    warps:
+        description: List warps
+        permission: tpcontrol.warp
+        usage: |
+            /listwarps
+    addhome:
+        description: Add a personal warp-style home
+        permission: tpcontrol.home
+        usage: |
+            /addhome <homename>
+    delhome:
+        description: Delete a personal home
+        permission: tpcontrol.home
+        usage: |
+            /delhome <homename>
+    home:
+        description: Teleport to your given home
+        permission: tpcontrol.home
+        usage: |
+            /home <homename>
+    homes:
+        description: Show your homes
+        permission: tpcontrol.home
+        usage: |
+            /homes

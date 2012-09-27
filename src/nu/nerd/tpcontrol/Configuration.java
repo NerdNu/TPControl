@@ -18,6 +18,7 @@ public class Configuration {
     public int ASK_EXPIRE;
     public int SAVE_INTERVAL;
     public ArrayList<String> GROUPS;
+    public int MAX_HOMES;
     public Map<String, String> MODE_MAP = new HashMap<String, String>();
     
     public Configuration(TPControl instance) {
@@ -47,6 +48,7 @@ public class Configuration {
         ASK_EXPIRE = plugin.getConfig().getInt("ask-expire");
         SAVE_INTERVAL = plugin.getConfig().getInt("save-interval");
         GROUPS = (ArrayList<String>)plugin.getConfig().getStringList("groups");
+    MAX_HOMES = plugin.getConfig().getInt("max-homes", 12);
         
     }
     

@@ -514,13 +514,8 @@ public class TPControl extends JavaPlugin implements Listener {
                 sender.sendMessage("This cannot be run from the console!");
                 return true;
             } else {
-                if(sender.hasPermission("tpcontrol.level.admin")) {
-                    if(args.length == 1) {
-                        warps.addwarp(args[0], sender, ((Player) sender).getLocation().getX(), ((Player) sender).getLocation().getY(), ((Player) sender).getLocation().getZ());
-                        return true;
-                    }
-                } else {
-                    sender.sendMessage(ChatColor.RED + "You do not have permission.");
+                if(args.length == 1) {
+                    warps.addwarp(args[0], sender, ((Player) sender).getLocation().getX(), ((Player) sender).getLocation().getY(), ((Player) sender).getLocation().getZ());
                     return true;
                 }
             }
@@ -531,13 +526,8 @@ public class TPControl extends JavaPlugin implements Listener {
                 sender.sendMessage("This cannot be run from the console!");
                 return true;
             } else {
-                if(sender.hasPermission("tpcontrol.level.admin")) {
-                    if(args.length == 1) {
-                        warps.delwarp(args[0], sender);
-                        return true;
-                    }
-                } else {
-                    sender.sendMessage(ChatColor.RED + "You do not have permission.");
+                if(args.length == 1) {
+                    warps.delwarp(args[0], sender);
                     return true;
                 }
             }
@@ -549,14 +539,8 @@ public class TPControl extends JavaPlugin implements Listener {
                 sender.sendMessage("This cannot be run from the console!");
                 return true;
             } else {
-                Player p1 = (Player)sender;
-                if (canTP(p1)) {
-                    if(args.length == 1) {
-                        warps.warp(args[0], sender);
-                        return true;
-                    }
-                } else {
-                    sender.sendMessage(ChatColor.RED + "You do not have permission.");
+                if(args.length == 1) {
+                    warps.warp(args[0], sender);
                     return true;
                 }
             }
@@ -564,14 +548,8 @@ public class TPControl extends JavaPlugin implements Listener {
         
         // Warps
         else if (command.getName().equalsIgnoreCase("warps")) {
-            Player p1 = (Player)sender;
-            if (canTP(p1)) {
-                warps.listwarps(sender);
-                return true;
-            } else {
-                sender.sendMessage(ChatColor.RED + "You do not have permission.");
-                return true;
-            }
+            warps.listwarps(sender);
+            return true;
         }
         
         // Add Home
@@ -580,14 +558,8 @@ public class TPControl extends JavaPlugin implements Listener {
                 sender.sendMessage("This cannot be run from the console!");
                 return true;
             } else {
-                Player p1 = (Player)sender;
-                if (canTP(p1)) {
-                    if(args.length == 1) {
-                        homes.addhome(args[0], sender, ((Player) sender).getLocation().getX(), ((Player) sender).getLocation().getY(), ((Player) sender).getLocation().getZ());
-                        return true;
-                    }
-                } else {
-                    sender.sendMessage(ChatColor.RED + "You do not have permission.");
+                if(args.length == 1) {
+                    homes.addhome(args[0], sender, ((Player) sender).getLocation().getX(), ((Player) sender).getLocation().getY(), ((Player) sender).getLocation().getZ());
                     return true;
                 }
             }
@@ -599,14 +571,8 @@ public class TPControl extends JavaPlugin implements Listener {
                 sender.sendMessage("This cannot be run from the console!");
                 return true;
             } else {
-                Player p1 = (Player)sender;
-                if (canTP(p1)) {
-                    if(args.length == 1) {
-                        homes.delhome(args[0], sender);
-                        return true;
-                    }
-                } else {
-                    sender.sendMessage(ChatColor.RED + "You do not have permission.");
+                if(args.length == 1) {
+                    homes.delhome(args[0], sender);
                     return true;
                 }
             }
@@ -617,14 +583,8 @@ public class TPControl extends JavaPlugin implements Listener {
                 sender.sendMessage("This cannot be run from the console!");
                 return true;
             } else {
-                Player p1 = (Player)sender;
-                if (canTP(p1)) {
-                    if(args.length == 1) {
-                        homes.home(args[0], sender);
-                        return true;
-                    }
-                } else {
-                    sender.sendMessage(ChatColor.RED + "You do not have permission.");
+                if(args.length == 1) {
+                    homes.home(args[0], sender);
                     return true;
                 }
             }
@@ -632,8 +592,13 @@ public class TPControl extends JavaPlugin implements Listener {
         
         // List Homes
         else if (command.getName().equalsIgnoreCase("homes")) {
-            homes.listhomes(sender);
-            return true;
+            if (!(sender instanceof Player)) {
+                sender.sendMessage("This cannot be run from the console!");
+                return true;
+            } else {
+                homes.listhomes(sender);
+                return true;
+            }
         }
         return false;
     }
