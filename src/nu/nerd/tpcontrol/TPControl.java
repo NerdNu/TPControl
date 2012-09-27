@@ -23,26 +23,41 @@ import org.bukkit.plugin.PluginManager;
 
 public class TPControl extends JavaPlugin implements Listener {
     Logger log = Logger.getLogger("Minecraft");
-    
-    
-    //private final TPControlListener cmdlistener = new TPControlListener(this);
+
     public final Configuration config = new Configuration(this);
-    
+    public Warps warps;
+    public Homes homes;
+
     private HashMap<String,User> user_cache = new HashMap<String, User>();
-    
+
     @Override
     public void onEnable(){
+        warps = new Warps(this);
+        homes = new Homes(this);
+        
         log = this.getLogger();
         //Listen to events
         PluginManager pm = getServer().getPluginManager();
-	pm.registerEvents(this, this);
+        pm.registerEvents(this, this);
         
         //Load config
         File config_file = new File(getDataFolder(), "config.yml");
+        File warp_file = new File(getDataFolder(), "warps.yml");
+        File home_file = new File(getDataFolder(), "homes.yml");
+        
         if(!config_file.exists()) {
             getConfig().options().copyDefaults(true);
             saveConfig();
         }
+        
+        if(!warp_file.exists()) {
+            config.initwarps();
+        }
+        
+        if(!home_file.exists()) {
+            config.inithomes();
+        }
+        
         config.load();
         
         //TODO: Can we get away with async?
@@ -490,6 +505,134 @@ public class TPControl extends JavaPlugin implements Listener {
             } else {
                 messagePlayer(p2, "Error: " + args[0] + " is not blocked.", ChatColor.GOLD);
             }
+            return true;
+        }
+        
+        // Add Warp
+        else if (command.getName().equalsIgnoreCase("addwarp")) {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage("This cannot be run from the console!");
+                return true;
+            } else {
+                if(sender.hasPermission("tpcontrol.level.admin")) {
+                    if(args.length == 1) {
+                        warps.addwarp(args[0], sender, ((Player) sender).getLocation().getX(), ((Player) sender).getLocation().getY(), ((Player) sender).getLocation().getZ());
+                        return true;
+                    }
+                } else {
+                    sender.sendMessage(ChatColor.RED + "You do not have permission.");
+                    return true;
+                }
+            }
+        }
+        // Delete Warp
+        else if (command.getName().equalsIgnoreCase("delwarp")) {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage("This cannot be run from the console!");
+                return true;
+            } else {
+                if(sender.hasPermission("tpcontrol.level.admin")) {
+                    if(args.length == 1) {
+                        warps.delwarp(args[0], sender);
+                        return true;
+                    }
+                } else {
+                    sender.sendMessage(ChatColor.RED + "You do not have permission.");
+                    return true;
+                }
+            }
+        }
+        
+        // Warp
+        else if (command.getName().equalsIgnoreCase("warp")) {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage("This cannot be run from the console!");
+                return true;
+            } else {
+                Player p1 = (Player)sender;
+                if (canTP(p1)) {
+                    if(args.length == 1) {
+                        warps.warp(args[0], sender);
+                        return true;
+                    }
+                } else {
+                    sender.sendMessage(ChatColor.RED + "You do not have permission.");
+                    return true;
+                }
+            }
+        }
+        
+        // Warps
+        else if (command.getName().equalsIgnoreCase("warps")) {
+            Player p1 = (Player)sender;
+            if (canTP(p1)) {
+                warps.listwarps(sender);
+                return true;
+            } else {
+                sender.sendMessage(ChatColor.RED + "You do not have permission.");
+                return true;
+            }
+        }
+        
+        // Add Home
+        else if (command.getName().equalsIgnoreCase("addhome")) {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage("This cannot be run from the console!");
+                return true;
+            } else {
+                Player p1 = (Player)sender;
+                if (canTP(p1)) {
+                    if(args.length == 1) {
+                        homes.addhome(args[0], sender, ((Player) sender).getLocation().getX(), ((Player) sender).getLocation().getY(), ((Player) sender).getLocation().getZ());
+                        return true;
+                    }
+                } else {
+                    sender.sendMessage(ChatColor.RED + "You do not have permission.");
+                    return true;
+                }
+            }
+        }
+        
+        // Delete Home
+        else if (command.getName().equalsIgnoreCase("delhome")) {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage("This cannot be run from the console!");
+                return true;
+            } else {
+                Player p1 = (Player)sender;
+                if (canTP(p1)) {
+                    if(args.length == 1) {
+                        homes.delhome(args[0], sender);
+                        return true;
+                    }
+                } else {
+                    sender.sendMessage(ChatColor.RED + "You do not have permission.");
+                    return true;
+                }
+            }
+        }
+        // Home
+        else if (command.getName().equalsIgnoreCase("home")) {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage("This cannot be run from the console!");
+                return true;
+            } else {
+                Player p1 = (Player)sender;
+                if (canTP(p1)) {
+                    if(args.length == 1) {
+                        homes.home(args[0], sender);
+                        return true;
+                    }
+                } else {
+                    sender.sendMessage(ChatColor.RED + "You do not have permission.");
+                    return true;
+                }
+            }
+        }
+        
+        // List Homes
+        else if (command.getName().equalsIgnoreCase("homes")) {
+            homes.listhomes(sender);
             return true;
         }
         return false;

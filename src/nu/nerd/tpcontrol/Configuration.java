@@ -1,16 +1,18 @@
 package nu.nerd.tpcontrol;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import org.bukkit.configuration.file.YamlConfiguration;
 
 public class Configuration {
     public static String[] relationships = {"blocked", "default", "friends"};
     public static String[] modes = {"deny", "ask", "allow"};
     
     private final TPControl plugin;
-    
-    
+
     public String MIN_GROUP;
     public String DEFAULT_MODE;
     public int ASK_EXPIRE;
@@ -50,5 +52,27 @@ public class Configuration {
     
     public String getCalculatedMode(String mode, String relationship) {
         return MODE_MAP.get(mode+"."+relationship);
+    }
+    
+    public void initwarps() {
+        YamlConfiguration yaml;
+        File yamlpath = new File(plugin.getDataFolder(), "warps.yml");
+        yaml = YamlConfiguration.loadConfiguration(yamlpath);
+        try {
+            yaml.save(yamlpath);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    public void inithomes() {
+        YamlConfiguration yaml;
+        File yamlpath = new File(plugin.getDataFolder(), "homes.yml");
+        yaml = YamlConfiguration.loadConfiguration(yamlpath);
+        try {
+            yaml.save(yamlpath);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

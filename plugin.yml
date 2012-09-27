@@ -1,7 +1,7 @@
 name: TPControl
 version: ${project.version}
 description: ${project.description}
-author: [Barney Gale, Deaygo, c45y]
+author: [Barney Gale, Deaygo, c45y, Nullsquare]
 main: nu.nerd.tpcontrol.TPControl
 permissions:
     tpcontrol.level.*:
