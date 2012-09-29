@@ -1,6 +1,7 @@
 ask-expire: 60
 save-interval: 300
 default-mode: ask
+max-homes: 12
 min-group: user
 groups:
 - user
