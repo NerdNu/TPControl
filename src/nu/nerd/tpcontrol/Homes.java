@@ -22,7 +22,7 @@ public class Homes {
 
     public void addhome(String name, CommandSender p, double x, double y, double z) {
         name = name.toLowerCase();
-        if(yaml.getStringList(p.getName()).size() == plugin.config.MAX_HOMES) {
+        if(yaml.getStringList(p.getName()).size() >= plugin.config.MAX_HOMES) {
             p.sendMessage(ChatColor.RED + "You have " + plugin.config.MAX_HOMES + " homes already. Consider deleting one or more.");
             p.sendMessage(ChatColor.RED + "Remember that exceptional builds may have a warp.");
         } else {
