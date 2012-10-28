@@ -33,8 +33,8 @@
     <dependencies>
         <dependency>
             <groupId>org.bukkit</groupId>
-            <artifactId>craftbukkit</artifactId>
-            <version>1.3.1-R1.0</version>
+            <artifactId>bukkit</artifactId>
+            <version>1.4.2-R0.1-SNAPSHOT</version>
         </dependency>
     </dependencies>
     <repositories>
