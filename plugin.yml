@@ -1,6 +1,7 @@
 name: TPControl
 version: ${project.version}
 description: ${project.description}
+website: ${project.url}
 author: [Barney Gale, Deaygo, c45y]
 main: nu.nerd.tpcontrol.TPControl
 permissions:
