@@ -8,6 +8,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -540,9 +541,27 @@ public class TPControl extends JavaPlugin implements Listener {
     }
     
     private void teleport(Player p1, Player p2) {
-        p1.teleport(p2.getLocation());
-        if (p2.isFlying()) {
-            p1.setFlying(true);
+        Location loc = p2.getLocation();
+        if(p2.isFlying() && !p1.isFlying()) {
+            while (true) {
+                if (loc.getBlock().getType() != Material.AIR){
+                    loc.setY(loc.getY()+1);
+                    break;
+                }
+                else if (loc.getY()-1 <= 0) {
+                    Block b = loc.getWorld().getHighestBlockAt(loc);
+                    if (b != null) {
+                        loc.setY(b.getLocation().getY() + 1);
+                    }
+                    else {
+                        loc = p2.getLocation();
+                    }
+                    break;
+                }
+                loc.setY(loc.getY() - 1);
+            }
         }
+        
+        p1.teleport(loc);
     }
 }
