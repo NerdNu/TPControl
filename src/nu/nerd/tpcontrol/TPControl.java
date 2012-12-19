@@ -19,8 +19,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
-import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.PluginManager;
+import org.bukkit.plugin.java.JavaPlugin;
 
 public class TPControl extends JavaPlugin implements Listener {
     Logger log = Logger.getLogger("Minecraft");
@@ -29,7 +29,7 @@ public class TPControl extends JavaPlugin implements Listener {
     //private final TPControlListener cmdlistener = new TPControlListener(this);
     public final Configuration config = new Configuration(this);
     
-    private HashMap<String,User> user_cache = new HashMap<String, User>();
+    private final HashMap<String,User> user_cache = new HashMap<String, User>();
     
     @Override
     public void onEnable(){
@@ -48,7 +48,8 @@ public class TPControl extends JavaPlugin implements Listener {
         
         //TODO: Can we get away with async?
         getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
-            public void run() {
+            @Override
+			public void run() {
                 for(User u : user_cache.values()) {
                     u.save();
                 }
@@ -193,9 +194,11 @@ public class TPControl extends JavaPlugin implements Listener {
             
             if (l != null) {
                 p.teleport(l);
+                return true;
             }
             else {
                 p.sendMessage(ChatColor.RED + "No last location saved for you.");
+                return true;
             }
         }
         //
