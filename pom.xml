@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>nu.nerd</groupId>
     <artifactId>TPControl</artifactId>
-    <version>0.3</version>
+    <version>0.3.1</version>
     <packaging>jar</packaging>
     <name>TPControl</name>
     <url>https://github.com/NerdNu/TPControl</url>
@@ -35,7 +35,7 @@
         <dependency>
             <groupId>org.bukkit</groupId>
             <artifactId>bukkit</artifactId>
-            <version>1.6.2-R0.1-SNAPSHOT</version>
+            <version>1.7.10-R0.1-SNAPSHOT</version>
         </dependency>
     </dependencies>
     <repositories>
@@ -84,7 +84,7 @@
                         <archive>
                             <addMavenDescriptor>false</addMavenDescriptor>
                         </archive>
-                        <finalName>TPControl</finalName>
+                        <finalName>TPControl-${project.version}</finalName>
                     </configuration>
                 </plugin>
                 <plugin>

@@ -1,5 +1,6 @@
 package nu.nerd.tpcontrol;
 import java.io.File;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.logging.Logger;
@@ -36,7 +37,7 @@ public class TPControl extends JavaPlugin implements Listener {
         log = this.getLogger();
         //Listen to events
         PluginManager pm = getServer().getPluginManager();
-	pm.registerEvents(this, this);
+        pm.registerEvents(this, this);
         
         //Load config
         File config_file = new File(getDataFolder(), "config.yml");
@@ -64,7 +65,7 @@ public class TPControl extends JavaPlugin implements Listener {
     }
     
     public Player getPlayer(String name) {
-        Player[] players = getServer().getOnlinePlayers();
+        Collection<? extends Player> players = getServer().getOnlinePlayers();
 
         Player found = null;
         String lowerName = name.toLowerCase();

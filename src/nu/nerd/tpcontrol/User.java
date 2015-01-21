@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Date;
 import java.util.List;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 
@@ -14,7 +15,6 @@ public class User {
     private TPControl plugin;
     
     public String username;
-    private Player player;
     
     //Ask-mode stuff
     String last_applicant;
@@ -28,20 +28,18 @@ public class User {
     public User (TPControl instance, Player p) {
         //player = instance.getServer().getPlayer(u);
         plugin = instance;
-        player = p;
-            
-        
+        username = p.getName();
+
         prefs_path = new File(plugin.getDataFolder(), "users");
         if(!prefs_path.exists()) {
             prefs_path.mkdir();
         }
-        prefs_path = new File(prefs_path, player.getName().toLowerCase() + ".yml");
-        
-        
+        prefs_path = new File(prefs_path, p.getUniqueId().toString() + ".yml");
+
         yaml = YamlConfiguration.loadConfiguration(prefs_path);
         yaml.addDefault("mode", plugin.config.DEFAULT_MODE);
     }
-    
+
     public void save() {
         if(!dirty) {
             return;
@@ -77,12 +75,19 @@ public class User {
     
     private boolean addToList(String name, String username) {
         List<String> l = getList(name);
-        username = username.toLowerCase();
-        if(l.contains(username)) {
+
+		String uuid = null;
+		Player perp = plugin.getPlayer(username);
+		if (perp != null)
+			uuid = perp.getUniqueId().toString();
+		else
+			uuid = Bukkit.getOfflinePlayer(username).getUniqueId().toString();
+
+        if(l.contains(uuid)) {
             return false;
         }
         
-        l.add(username);
+        l.add(uuid);
         yaml.set(name,l);
         dirty = true;
         return true;
@@ -90,12 +95,19 @@ public class User {
     
     private boolean delFromList (String name, String username) {
         List<String> l = getList(name);
-        username = username.toLowerCase();
-        if(!l.contains(username)) {
+
+		String uuid = null;
+		Player perp = plugin.getPlayer(username);
+		if (perp != null)
+			uuid = perp.getUniqueId().toString();
+		else
+			uuid = Bukkit.getOfflinePlayer(username).getUniqueId().toString();
+
+        if(l.contains(uuid)) {
             return false;
         }
         
-        l.remove(username);
+        l.remove(uuid);
         yaml.set(name,l);
         dirty = true;
         return true;
@@ -144,11 +156,11 @@ public class User {
     public String getCalculatedMode(Player applicant) {
         String mode = getMode();
         String relation = "default";
-        String username = applicant.getName().toLowerCase();
-        if(getFriends().contains(username)) {
+        String uuid = applicant.getUniqueId().toString();
+        if(getFriends().contains(uuid)) {
             relation = "friends";
         }
-        if(getBlocked().contains(username)) {
+        if(getBlocked().contains(uuid)) {
             relation = "blocked";
         }
         
@@ -157,15 +169,16 @@ public class User {
     
     //For 'ask' mode:
     public void lodgeRequest(Player applicant) {
-        String username = ChatColor.stripColor(applicant.getName()).toLowerCase();
+        String applicant_username = ChatColor.stripColor(applicant.getName()).toLowerCase();
         Date t = new Date();
-        if(username.equals(last_applicant) && t.getTime() < last_applicant_time + 1000L*plugin.config.ASK_EXPIRE) {
+        if(applicant_username.equals(last_applicant) && t.getTime() < last_applicant_time + 1000L*plugin.config.ASK_EXPIRE) {
             plugin.messagePlayer(applicant, "Don't spam /tp!");
             return;
         }
-        last_applicant = username;
+        last_applicant = applicant_username;
         last_applicant_time = t.getTime();
-        plugin.messagePlayer(player, applicant.getName() + " wants to teleport to you. Please use /tpallow or /tpdeny.");
-        
+        Player player = plugin.getPlayer(this.username);
+        if (player != null)
+            plugin.messagePlayer(player, applicant.getName() + " wants to teleport to you. Please use /tpallow or /tpdeny.");
     }
 }
