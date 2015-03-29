@@ -76,12 +76,12 @@ public class User {
     private boolean addToList(String name, String username) {
         List<String> l = getList(name);
 
-		String uuid = null;
-		Player perp = plugin.getPlayer(username);
-		if (perp != null)
-			uuid = perp.getUniqueId().toString();
-		else
-			uuid = Bukkit.getOfflinePlayer(username).getUniqueId().toString();
+        String uuid = null;
+        Player perp = plugin.getPlayer(username);
+        if (perp != null)
+            uuid = perp.getUniqueId().toString();
+        else
+            uuid = Bukkit.getOfflinePlayer(username).getUniqueId().toString();
 
         if(l.contains(uuid)) {
             return false;
@@ -96,12 +96,12 @@ public class User {
     private boolean delFromList (String name, String username) {
         List<String> l = getList(name);
 
-		String uuid = null;
-		Player perp = plugin.getPlayer(username);
-		if (perp != null)
-			uuid = perp.getUniqueId().toString();
-		else
-			uuid = Bukkit.getOfflinePlayer(username).getUniqueId().toString();
+        String uuid = null;
+        Player perp = plugin.getPlayer(username);
+        if (perp != null)
+            uuid = perp.getUniqueId().toString();
+        else
+            uuid = Bukkit.getOfflinePlayer(username).getUniqueId().toString();
 
         if(l.contains(uuid)) {
             return false;
