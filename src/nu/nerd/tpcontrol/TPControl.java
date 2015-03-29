@@ -1,8 +1,11 @@
 package nu.nerd.tpcontrol;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.logging.Logger;
 
 import org.bukkit.ChatColor;
@@ -18,7 +21,11 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.PluginManager;
@@ -26,11 +33,11 @@ import org.bukkit.plugin.PluginManager;
 public class TPControl extends JavaPlugin implements Listener {
     Logger log = Logger.getLogger("Minecraft");
     
-    
     //private final TPControlListener cmdlistener = new TPControlListener(this);
     public final Configuration config = new Configuration(this);
     
     private HashMap<String,User> user_cache = new HashMap<String, User>();
+    public HashMap<Player, WarpTask> warp_warmups = new HashMap<Player, WarpTask>();
     
     @Override
     public void onEnable(){
@@ -128,6 +135,61 @@ public class TPControl extends JavaPlugin implements Listener {
         }
     }
     
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onPlayerMove(PlayerMoveEvent event) {
+        Player p1 = event.getPlayer();
+        if (this.warp_warmups.containsKey(p1)) {
+            WarpTask warpTask = this.warp_warmups.get(p1);
+            if (warpTask.getWarp().doesWarmupCancelOnMove()) {
+                Location l1 = event.getFrom();
+                Location l2 = event.getTo();
+                if ((int)l1.getX() != (int)l2.getX() || (int)l1.getY() != (int)l2.getY() || (int)l1.getZ() != (int)l2.getZ()) {
+                    this.warp_warmups.get(p1).cancel();
+                    this.warp_warmups.remove(p1);
+                    messagePlayer(p1, "Cancelling warp.");
+                }
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onPlayerDamage(EntityDamageEvent event) {
+        if (event.getEntity() instanceof Player) {
+            Player p1 = (Player) event.getEntity();
+            if (this.warp_warmups.containsKey(p1)) {
+                WarpTask warpTask = this.warp_warmups.get(p1);
+                if (warpTask.getWarp().doesWarmupCancelOnDamage()) {
+                    this.warp_warmups.get(p1).cancel();
+                    this.warp_warmups.remove(p1);
+                    messagePlayer(p1, "Cancelling warp.");
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        Player p1 = event.getPlayer();
+        if (this.warp_warmups.containsKey(p1)) {
+            this.warp_warmups.get(p1).cancel();
+            this.warp_warmups.remove(p1);
+        }
+    }
+
+    @EventHandler
+    public void onCommandPreProcess(PlayerCommandPreprocessEvent event) {
+        String message = event.getMessage();
+        for (Warp warp : config.WARPS.values()) {
+            for (String shortcut : warp.getShortcuts()) {
+                if (message.startsWith("/" + shortcut)) {
+                    Command command = new GhostCommand("warp");
+                    onCommand(event.getPlayer(), command, shortcut, new String[]{warp.getName()});
+                    event.setCancelled(true);
+                }
+            }
+        }
+    }
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String name, String[] args) {
         //
@@ -494,6 +556,250 @@ public class TPControl extends JavaPlugin implements Listener {
             }
             return true;
         }
+        //
+        // /warps
+        //
+        else if (command.getName().equalsIgnoreCase("warps")) {
+            StringBuilder sb = new StringBuilder();
+            Iterator i = this.config.WARPS.values().iterator();
+            Player player = null;
+            if (sender instanceof Player)
+                player = (Player)sender;
+
+            while (i.hasNext()) {
+                Warp warp = (Warp) i.next();
+
+                if (player == null || canWarp(player, warp)) {
+                    sb.append(warp.getName());
+                    if (i.hasNext())
+                        sb.append(", ");
+                }
+            }
+
+            sender.sendMessage(ChatColor.GOLD + "Warps: " + sb.toString());
+        }
+        //
+        // /warp <warp>
+        //
+        else if (command.getName().equalsIgnoreCase("warp")) {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage("This cannot be run from the console!");
+                return true;
+            }
+
+            final Player p2 = (Player)sender;
+
+            if(args.length != 1) {
+                messagePlayer(p2, "Usage: /warp <warp>", ChatColor.GOLD);
+                return true;
+            }
+
+            final Warp w1 = this.config.WARPS.get(args[0]);
+
+            if(w1 == null) {
+                messagePlayer(p2, "That warp does not exist.", ChatColor.RED);
+                return true;
+            }
+
+            if(!canWarp(p2, w1)) {
+                messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+                return true;
+            }
+
+            Date now = new Date();
+            Date p2cd = w1.getCooldown(p2);
+            if (p2cd != null && !now.after(new Date(p2cd.getTime() + w1.getCooldown() * 1000))) {
+                messagePlayer(p2, "You must wait ", ChatColor.RED);
+                return true;
+            }
+
+            if (w1.getWarmup() > 0) {
+                Date p2wu = w1.getWarmup(p2);
+                if (p2wu != null) {
+                    int elapsed = (int) ((now.getTime() - p2wu.getTime()) / 1000);
+                    int remaining = w1.getWarmup() - elapsed;
+                    messagePlayer(p2, "You have " + remaining + " second(s) of warmup remaining.", ChatColor.RED);
+
+                    return true;
+                }
+                else {
+                    messagePlayer(p2, "There is a " + w1.getWarmup() + " second warmup for this warp.", ChatColor.RED);
+                    if (w1.doesWarmupCancelOnMove()) {
+                        messagePlayer(p2, "You must not move during this time", ChatColor.RED);
+                    }
+
+                    WarpTask warpTask = new WarpTask(this, w1, p2);
+
+                    this.warp_warmups.put(p2, warpTask);
+
+                    warpTask.runTaskLater(this, w1.getWarmup() * 20);
+
+                    return true;
+                }
+            }
+
+            p2.teleport(w1.getLocation());
+            return true;
+        }
+        //
+        // /setwarp <name>
+        //
+        else if (command.getName().equalsIgnoreCase("setwarp")) {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage("This cannot be run from the console!");
+                return true;
+            }
+
+            final Player p2 = (Player)sender;
+
+            if(!p2.hasPermission("tpcontrol.setwarp")) {
+                messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+                return true;
+            }
+
+            if(args.length < 1) {
+                messagePlayer(p2, "Usage: /setwarp <name> [option] [values...]", ChatColor.GOLD);
+                return true;
+            }
+
+            Warp w1 = this.config.WARPS.get(args[0]);
+
+            if(w1 == null) {
+                w1 = new Warp(args[0], p2.getLocation());
+                this.config.WARPS.put(args[0], w1);
+            }
+
+            String option = "location";
+            if (args.length >= 2) {
+                option = args[1];
+            }
+
+            if (option.equalsIgnoreCase("location")) {
+                w1.setLocation(p2.getLocation());
+                messagePlayer(p2, "Set location for warp " + args[0], ChatColor.GOLD);
+            }
+            else if (option.equalsIgnoreCase("warmup")) {
+                if (args.length != 3) {
+                    messagePlayer(p2, "Usage: /setwarp <name> warmup <number>", ChatColor.RED);
+                    return true;
+                }
+
+                int warmup = Integer.parseInt(args[2]);
+                w1.setWarmup(warmup);
+                messagePlayer(p2, "Set warmup for warp " + args[0], ChatColor.GOLD);
+            }
+            else if (option.equalsIgnoreCase("warmup-cancel-on-move")) {
+                if (args.length != 3) {
+                    messagePlayer(p2, "Usage: /setwarp <name> warmup-cancel-on-move <true/false>", ChatColor.RED);
+                    return true;
+                }
+
+                boolean warmupCancelOnMove = Boolean.parseBoolean(args[2]);
+                w1.setWarmupCancelOnMove(warmupCancelOnMove);
+                messagePlayer(p2, "Set warmup cancel-on-move for warp " + args[0], ChatColor.GOLD);
+            }
+            else if (option.equalsIgnoreCase("warmup-cancel-on-damage")) {
+                if (args.length != 3) {
+                    messagePlayer(p2, "Usage: /setwarp <name> warmup-cancel-on-damage <true/false>", ChatColor.RED);
+                    return true;
+                }
+
+                boolean warmupCancelOnDamage = Boolean.parseBoolean(args[2]);
+                w1.setWarmupCancelOnDamage(warmupCancelOnDamage);
+                messagePlayer(p2, "Set warmup cancel-on-damage for warp " + args[0], ChatColor.GOLD);
+            }
+            else if (option.equalsIgnoreCase("cooldown")) {
+                if (args.length != 3) {
+                    messagePlayer(p2, "Usage: /setwarp <name> cooldown <number>", ChatColor.RED);
+                    return true;
+                }
+
+                int cooldown = Integer.parseInt(args[2]);
+                w1.setCooldown(cooldown);
+                messagePlayer(p2, "Set cooldown for warp " + args[0], ChatColor.GOLD);
+            }
+            else if (option.equalsIgnoreCase("shortcuts")) {
+                List<String> shortcuts = new ArrayList<String>();
+                for (int i = 2; i < args.length; i++) {
+                    shortcuts.add(args[i]);
+                }
+                w1.setShortcuts(shortcuts);
+                messagePlayer(p2, "Set shortcuts for warp " + args[0], ChatColor.GOLD);
+            }
+
+            getConfig().set("warps." + w1.getName() + ".world", w1.getLocation().getWorld().getName());
+            getConfig().set("warps." + w1.getName() + ".x", w1.getLocation().getX());
+            getConfig().set("warps." + w1.getName() + ".y", w1.getLocation().getY());
+            getConfig().set("warps." + w1.getName() + ".z", w1.getLocation().getZ());
+            getConfig().set("warps." + w1.getName() + ".yaw", w1.getLocation().getYaw());
+            getConfig().set("warps." + w1.getName() + ".pitch", w1.getLocation().getPitch());
+            getConfig().set("warps." + w1.getName() + ".warmup.length", w1.getWarmup());
+            getConfig().set("warps." + w1.getName() + ".warmup.cancel-on-move", w1.doesWarmupCancelOnMove());
+            getConfig().set("warps." + w1.getName() + ".warmup.cancel-on-damage", w1.doesWarmupCancelOnDamage());
+            getConfig().set("warps." + w1.getName() + ".cooldown.length", w1.getCooldown());
+            getConfig().set("warps." + w1.getName() + ".shortcuts", w1.getShortcuts());
+            saveConfig();
+
+            return true;
+        }
+        //
+        // /setwarp <name>
+        //
+        else if (command.getName().equalsIgnoreCase("delwarp")) {
+            if(!sender.hasPermission("tpcontrol.delwarp")) {
+                sender.sendMessage(ChatColor.RED + "You do not have permission.");
+                return true;
+            }
+
+            if(args.length != 1) {
+                sender.sendMessage(ChatColor.RED + "Usage: /delwarp <name>");
+                return true;
+            }
+
+            Warp w1 = this.config.WARPS.get(args[0]);
+
+            if(w1 != null) {
+                this.config.WARPS.remove(args[0]);
+                sender.sendMessage(ChatColor.RED + "Removed warp " + args[0]);
+            }
+            else {
+                sender.sendMessage(ChatColor.RED + "Warp does not exist.");
+            }
+
+            getConfig().set("warps." + args[0], null);
+            saveConfig();
+
+            return true;
+        }
+        //
+        // /cancelwarp
+        //
+        else if (command.getName().equalsIgnoreCase("cancelwarp")) {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage("This cannot be run from the console!");
+                return true;
+            }
+
+            final Player p2 = (Player)sender;
+
+            if(!p2.hasPermission("tpcontrol.cancelwarp")) {
+                messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+                return true;
+            }
+
+            if (warp_warmups.containsKey(p2)) {
+                messagePlayer(p2, "Cancelling warp.", ChatColor.RED);
+                WarpTask wt1 = warp_warmups.get(p2);
+                wt1.cancel();
+                warp_warmups.remove(p2);
+
+                return true;
+            }
+
+            messagePlayer(p2, "You have no warp to cancel.", ChatColor.RED);
+            return true;
+        }
+
         return false;
     }
     
@@ -520,7 +826,7 @@ public class TPControl extends JavaPlugin implements Listener {
         }
         return false;
     }
-    
+
     private boolean canTP(Player p1) {
         for(String g : config.GROUPS) {
             if(g.equals(config.MIN_GROUP) && p1.hasPermission("tpcontrol.level."+g)) {
@@ -532,13 +838,18 @@ public class TPControl extends JavaPlugin implements Listener {
         }
         return false;
     }
-    
+
+    private boolean canWarp(Player p1, Warp w1) {
+        return (p1.hasPermission("tpcontrol.warp.*") || p1.hasPermission("tpcontrol.warp." + w1.getName()));
+    }
+
     public void messagePlayer(Player p, String m) {
         messagePlayer(p, m, ChatColor.GRAY);
     }
     
     public void messagePlayer(Player p, String m, ChatColor color) {
-        p.sendMessage(ChatColor.GRAY + "[TP] " + color + m);
+//        p.sendMessage(ChatColor.GRAY + "[TP] " + color + m);
+        p.sendMessage(color + m);
     }
     
     private void teleport(Player p1, Player p2) {
