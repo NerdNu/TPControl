@@ -4,20 +4,28 @@ description: ${project.description}
 website: ${project.url}
 author: [Barney Gale, Deaygo, c45y, slide]
 main: nu.nerd.tpcontrol.TPControl
+softdepend: [Vault]
 permissions:
     tpcontrol.level.*:
         description: Teleport user class.
     tpcontrol.tppos:
         description: Allows a player to use tppos
+    tpcontrol.back:
+        descrption: Allows a player to teleport back to their previous location
     tpcontrol.warp.*:
         description: Allows a player to warp to any warp
     tpcontrol.setwarp:
         description: Allows a player to set a warp location
     tpcontrol.delwarp:
         description: Allows a player to delete a warp
+    tpcontrol.admin:
+        description: Allows use of /tpcontrol
 description: 
     Simple, configurable, tiered teleport plugin with allow/ask/deny modes.
 commands:
+    tpcontrol:
+        description: TPControl admin functions
+        permission: tpcontrol.admin
     tp:
         description: Teleport to another player
         usage: |
@@ -26,7 +34,6 @@ commands:
         description: Teleport back to your previous location
         usage: |
            /back - teleport back to your previous location
-        permission: tpcontrol.back
     tppos:
         description: Teleport to a position
         usage: |

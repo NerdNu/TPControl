@@ -45,6 +45,8 @@ public class User {
             return;
         }
 
+//        plugin.getLogger().info("Saving user: " + username);
+
         try {
             yaml.save(prefs_path);
         } catch (IOException e) {
@@ -54,14 +56,24 @@ public class User {
         dirty = false;
     }
 
+    public String getUsername() {
+        return username;
+    }
+
     //
     // Last Location handling.
     //
     public void setLastLocation(Location last) {
+        yaml.set("last_location", last);
         this.lastLocation = last;
+        dirty = true;
+        this.save();
     }
 
     public Location getLastLocation() {
+        if (this.lastLocation == null)
+            this.lastLocation = (Location) yaml.get("last_location");
+
         return this.lastLocation;
     }
 

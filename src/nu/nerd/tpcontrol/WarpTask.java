@@ -33,9 +33,16 @@ public class WarpTask extends BukkitRunnable {
 
     public void run() {
         this.player.sendMessage(ChatColor.GOLD + "Warping to " + this.warp.getName());
+
+        if (this.warp.doesAllowBack()) {
+            User u = this.plugin.getUser(this.player);
+            u.setLastLocation(this.player.getLocation());
+        }
+
         this.player.teleport(this.warp.getLocation());
         if (this.plugin.warp_warmups.containsKey(this.player)) {
             this.plugin.warp_warmups.remove(this.player);
         }
+        this.warp.removeWarmup(this.player);
     }
 }

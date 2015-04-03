@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
+import net.milkbowl.vault.economy.Economy;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -29,6 +30,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.PluginManager;
+import org.bukkit.plugin.RegisteredServiceProvider;
 
 public class TPControl extends JavaPlugin implements Listener {
     Logger log = Logger.getLogger("Minecraft");
@@ -38,10 +40,21 @@ public class TPControl extends JavaPlugin implements Listener {
     
     private HashMap<String,User> user_cache = new HashMap<String, User>();
     public HashMap<Player, WarpTask> warp_warmups = new HashMap<Player, WarpTask>();
+
+    public Economy economy = null;
     
     @Override
     public void onEnable(){
         log = this.getLogger();
+
+        // Setup Vault Economy
+        if (getServer().getPluginManager().getPlugin("Vault") != null)  {
+            RegisteredServiceProvider<Economy> economyProvider = getServer().getServicesManager().getRegistration(net.milkbowl.vault.economy.Economy.class);
+            if (economyProvider != null) {
+                this.economy = economyProvider.getProvider();
+            }
+        }
+
         //Listen to events
         PluginManager pm = getServer().getPluginManager();
         pm.registerEvents(this, this);
@@ -95,7 +108,9 @@ public class TPControl extends JavaPlugin implements Listener {
         if (event.isCancelled())
             return;
         
-        if (event.getCause() == PlayerTeleportEvent.TeleportCause.PLUGIN || event.getCause() == PlayerTeleportEvent.TeleportCause.COMMAND) {
+        if (event.getPlayer().hasPermission("tpcontrol.back") &&
+            (event.getCause() == PlayerTeleportEvent.TeleportCause.PLUGIN || event.getCause() == PlayerTeleportEvent.TeleportCause.COMMAND)
+        ) {
             User u = getUser(event.getPlayer());
             u.setLastLocation(event.getFrom());
         }
@@ -146,6 +161,7 @@ public class TPControl extends JavaPlugin implements Listener {
                 if ((int)l1.getX() != (int)l2.getX() || (int)l1.getY() != (int)l2.getY() || (int)l1.getZ() != (int)l2.getZ()) {
                     this.warp_warmups.get(p1).cancel();
                     this.warp_warmups.remove(p1);
+                    warpTask.getWarp().removeWarmup(p1);
                     messagePlayer(p1, "Cancelling warp.");
                 }
             }
@@ -181,7 +197,7 @@ public class TPControl extends JavaPlugin implements Listener {
         String message = event.getMessage();
         for (Warp warp : config.WARPS.values()) {
             for (String shortcut : warp.getShortcuts()) {
-                if (message.startsWith("/" + shortcut)) {
+                if (message.toLowerCase().startsWith("/" + shortcut.toLowerCase())) {
                     Command command = new GhostCommand("warp");
                     onCommand(event.getPlayer(), command, shortcut, new String[]{warp.getName()});
                     event.setCancelled(true);
@@ -195,7 +211,17 @@ public class TPControl extends JavaPlugin implements Listener {
         //
         // /tp
         //
-        if (command.getName().equalsIgnoreCase("tp")) {
+        if (command.getName().equalsIgnoreCase("tpcontrol")) {
+            if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
+                config.load();
+                sender.sendMessage("Reloaded config.");
+                return true;
+            }
+        }
+        //
+        // /tp
+        //
+        else if (command.getName().equalsIgnoreCase("tp")) {
             if (!(sender instanceof Player)) {
                 sender.sendMessage("This cannot be run from the console!");
                 return true;
@@ -251,15 +277,18 @@ public class TPControl extends JavaPlugin implements Listener {
             
             Player p = (Player)sender;
             User u = getUser(p);
-            
+
             Location l = u.getLastLocation();
             
             if (l != null) {
+                u.setLastLocation(null);
                 p.teleport(l);
             }
             else {
                 p.sendMessage(ChatColor.RED + "No last location saved for you.");
             }
+
+            return true;
         }
         //
         // /tppos [world] x y z
@@ -560,23 +589,31 @@ public class TPControl extends JavaPlugin implements Listener {
         // /warps
         //
         else if (command.getName().equalsIgnoreCase("warps")) {
-            StringBuilder sb = new StringBuilder();
-            Iterator i = this.config.WARPS.values().iterator();
             Player player = null;
             if (sender instanceof Player)
                 player = (Player)sender;
 
+            StringBuilder sb = new StringBuilder();
+            int j = 0;
+            Iterator i = this.config.WARPS.values().iterator();
             while (i.hasNext()) {
                 Warp warp = (Warp) i.next();
 
                 if (player == null || canWarp(player, warp)) {
-                    sb.append(warp.getName());
-                    if (i.hasNext())
-                        sb.append(", ");
+                    if (j % 2 == 0)
+                        sb.append(ChatColor.GRAY);
+                    else
+                        sb.append(ChatColor.WHITE);
+
+                    sb.append(warp.getName()).append(", ");
+                    j++;
                 }
             }
+            String list = sb.toString();
+            if (list.length() >= 2)
+                list = list.substring(0, list.length() - 2);
 
-            sender.sendMessage(ChatColor.GOLD + "Warps: " + sb.toString());
+            sender.sendMessage(ChatColor.GOLD + "Warps: " + list);
         }
         //
         // /warp <warp>
@@ -594,7 +631,7 @@ public class TPControl extends JavaPlugin implements Listener {
                 return true;
             }
 
-            final Warp w1 = this.config.WARPS.get(args[0]);
+            final Warp w1 = this.config.WARPS.get(args[0].toLowerCase());
 
             if(w1 == null) {
                 messagePlayer(p2, "That warp does not exist.", ChatColor.RED);
@@ -604,6 +641,29 @@ public class TPControl extends JavaPlugin implements Listener {
             if(!canWarp(p2, w1)) {
                 messagePlayer(p2, "You do not have permission.", ChatColor.RED);
                 return true;
+            }
+
+            if(economy != null) {
+                boolean low_en = w1.getBalanceMin() != null;
+                boolean low = low_en;
+                if (low_en)
+                    low = economy.getBalance(p2) >= w1.getBalanceMin();
+
+                boolean high_en = w1.getBalanceMax() != null;
+                boolean high = high_en;
+                if (high_en)
+                    high = economy.getBalance(p2) <= w1.getBalanceMax();
+
+                if (low_en && low) {
+                    messagePlayer(p2, "Your balance is too low.", ChatColor.RED);
+                }
+                if (high_en && high) {
+                    messagePlayer(p2, "Your balance is too high.", ChatColor.RED);
+                }
+
+                if (low_en && !low || high_en && !high) {
+                    return true;
+                }
             }
 
             Date now = new Date();
@@ -629,13 +689,18 @@ public class TPControl extends JavaPlugin implements Listener {
                     }
 
                     WarpTask warpTask = new WarpTask(this, w1, p2);
-
                     this.warp_warmups.put(p2, warpTask);
-
                     warpTask.runTaskLater(this, w1.getWarmup() * 20);
+
+                    w1.setWarmup(p2, now);
 
                     return true;
                 }
+            }
+
+            if (w1.allowBack) {
+                User u = getUser(p2);
+                u.setLastLocation(p2.getLocation());
             }
 
             p2.teleport(w1.getLocation());
@@ -662,11 +727,11 @@ public class TPControl extends JavaPlugin implements Listener {
                 return true;
             }
 
-            Warp w1 = this.config.WARPS.get(args[0]);
+            Warp w1 = this.config.WARPS.get(args[0].toLowerCase());
 
-            if(w1 == null) {
+            if (w1 == null) {
                 w1 = new Warp(args[0], p2.getLocation());
-                this.config.WARPS.put(args[0], w1);
+                this.config.WARPS.put(args[0].toLowerCase(), w1);
             }
 
             String option = "location";
@@ -718,6 +783,36 @@ public class TPControl extends JavaPlugin implements Listener {
                 w1.setCooldown(cooldown);
                 messagePlayer(p2, "Set cooldown for warp " + args[0], ChatColor.GOLD);
             }
+            else if (option.equalsIgnoreCase("balance-min")) {
+                if (args.length != 3) {
+                    messagePlayer(p2, "Usage: /setwarp <name> balance-min <number>", ChatColor.RED);
+                    return true;
+                }
+
+                int balanceMin = Integer.parseInt(args[2]);
+                w1.setBalanceMin(balanceMin);
+                messagePlayer(p2, "Set min balance for warp " + args[0], ChatColor.GOLD);
+            }
+            else if (option.equalsIgnoreCase("balance-max")) {
+                if (args.length != 3) {
+                    messagePlayer(p2, "Usage: /setwarp <name> balance-max <number>", ChatColor.RED);
+                    return true;
+                }
+
+                int balanceMax = Integer.parseInt(args[2]);
+                w1.setBalanceMax(balanceMax);
+                messagePlayer(p2, "Set max balance for warp " + args[0], ChatColor.GOLD);
+            }
+            else if (option.equalsIgnoreCase("allow-back")) {
+                if (args.length != 3) {
+                    messagePlayer(p2, "Usage: /setwarp <name> allow-back <true/false>", ChatColor.RED);
+                    return true;
+                }
+
+                boolean allowBack = Boolean.parseBoolean(args[2]);
+                w1.setAllowBack(allowBack);
+                messagePlayer(p2, "Set allow-back for warp " + args[0], ChatColor.GOLD);
+            }
             else if (option.equalsIgnoreCase("shortcuts")) {
                 List<String> shortcuts = new ArrayList<String>();
                 for (int i = 2; i < args.length; i++) {
@@ -727,17 +822,20 @@ public class TPControl extends JavaPlugin implements Listener {
                 messagePlayer(p2, "Set shortcuts for warp " + args[0], ChatColor.GOLD);
             }
 
-            getConfig().set("warps." + w1.getName() + ".world", w1.getLocation().getWorld().getName());
-            getConfig().set("warps." + w1.getName() + ".x", w1.getLocation().getX());
-            getConfig().set("warps." + w1.getName() + ".y", w1.getLocation().getY());
-            getConfig().set("warps." + w1.getName() + ".z", w1.getLocation().getZ());
-            getConfig().set("warps." + w1.getName() + ".yaw", w1.getLocation().getYaw());
-            getConfig().set("warps." + w1.getName() + ".pitch", w1.getLocation().getPitch());
+            getConfig().set("warps." + w1.getName() + ".location.world", w1.getLocation().getWorld().getName());
+            getConfig().set("warps." + w1.getName() + ".location.x", w1.getLocation().getX());
+            getConfig().set("warps." + w1.getName() + ".location.y", w1.getLocation().getY());
+            getConfig().set("warps." + w1.getName() + ".location.z", w1.getLocation().getZ());
+            getConfig().set("warps." + w1.getName() + ".location.yaw", w1.getLocation().getYaw());
+            getConfig().set("warps." + w1.getName() + ".location.pitch", w1.getLocation().getPitch());
             getConfig().set("warps." + w1.getName() + ".warmup.length", w1.getWarmup());
             getConfig().set("warps." + w1.getName() + ".warmup.cancel-on-move", w1.doesWarmupCancelOnMove());
             getConfig().set("warps." + w1.getName() + ".warmup.cancel-on-damage", w1.doesWarmupCancelOnDamage());
             getConfig().set("warps." + w1.getName() + ".cooldown.length", w1.getCooldown());
+            getConfig().set("warps." + w1.getName() + ".economy.balance.min", w1.getBalanceMin());
+            getConfig().set("warps." + w1.getName() + ".economy.balance.max", w1.getBalanceMax());
             getConfig().set("warps." + w1.getName() + ".shortcuts", w1.getShortcuts());
+            getConfig().set("warps." + w1.getName() + ".allow-back", w1.doesAllowBack());
             saveConfig();
 
             return true;
@@ -756,10 +854,10 @@ public class TPControl extends JavaPlugin implements Listener {
                 return true;
             }
 
-            Warp w1 = this.config.WARPS.get(args[0]);
+            Warp w1 = this.config.WARPS.get(args[0].toLowerCase());
 
             if(w1 != null) {
-                this.config.WARPS.remove(args[0]);
+                this.config.WARPS.remove(args[0].toLowerCase());
                 sender.sendMessage(ChatColor.RED + "Removed warp " + args[0]);
             }
             else {
@@ -804,7 +902,7 @@ public class TPControl extends JavaPlugin implements Listener {
     }
     
     //Pull a user from the cache, or create it if necessary
-    private User getUser(Player p) {
+    public User getUser(Player p) {
         User u = user_cache.get(p.getName().toLowerCase());
         if(u == null) {
             u = new User(this, p);

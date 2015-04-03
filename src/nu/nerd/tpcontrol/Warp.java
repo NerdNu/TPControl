@@ -18,8 +18,13 @@ public class Warp {
 
     protected int cooldown = 0;
 
+    protected Integer balanceMin = null;
+    protected Integer balanceMax = null;
+
     protected Map<Player, Date> warmups = new HashMap<Player, Date>();
     protected Map<Player, Date> cooldowns = new HashMap<Player, Date>();
+
+    protected boolean allowBack = false;
 
     protected List<String> shortcuts = new ArrayList<String>();
 
@@ -88,6 +93,10 @@ public class Warp {
         this.warmups.put(p1, d1);
     }
 
+    public void removeWarmup(Player p1) {
+        this.warmups.remove(p1);
+    }
+
     public Date getCooldown(Player p1) {
         if (p1 != null && cooldowns.containsKey(p1)) {
             return cooldowns.get(p1);
@@ -98,6 +107,30 @@ public class Warp {
 
     public void setCooldown(Player p1, Date d1) {
         this.cooldowns.put(p1, d1);
+    }
+
+    public Integer getBalanceMin() {
+        return balanceMin;
+    }
+
+    public void setBalanceMin(Integer balanceMin) {
+        this.balanceMin = balanceMin;
+    }
+
+    public Integer getBalanceMax() {
+        return balanceMax;
+    }
+
+    public void setBalanceMax(Integer balanceMax) {
+        this.balanceMax = balanceMax;
+    }
+
+    public boolean doesAllowBack() {
+        return allowBack;
+    }
+
+    public void setAllowBack(boolean allowBack) {
+        this.allowBack = allowBack;
     }
 
     public List<String> getShortcuts() {
