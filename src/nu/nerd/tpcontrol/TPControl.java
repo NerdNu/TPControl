@@ -274,8 +274,14 @@ public class TPControl extends JavaPlugin implements Listener {
                 sender.sendMessage("This cannot be run from the console!");
                 return true;
             }
-            
+
             Player p = (Player)sender;
+
+            if (!p.hasPermission("tpcontrol.back")) {
+                messagePlayer(p, "You do not have permission.", ChatColor.RED);
+                return true;
+            }
+
             User u = getUser(p);
 
             Location l = u.getLastLocation();
