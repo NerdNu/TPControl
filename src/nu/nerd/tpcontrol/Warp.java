@@ -11,7 +11,7 @@ import org.bukkit.entity.Player;
 public class Warp {
     protected String name;
     protected Location location;
-
+    protected boolean pub = false;
     protected int warmup = 0;
     protected boolean warmupCancelOnMove = false;
     protected boolean warmupCancelOnDamage = false;
@@ -47,6 +47,16 @@ public class Warp {
 
     public void setLocation(Location location) {
         this.location = location;
+    }
+
+    public boolean isPublic()
+    {
+        return this.pub;
+    }
+
+    public void setPublic(boolean pub)
+    {
+        this.pub = pub;
     }
 
     public int getWarmup() {

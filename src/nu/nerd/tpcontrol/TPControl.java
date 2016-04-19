@@ -1,14 +1,20 @@
 package nu.nerd.tpcontrol;
 import java.io.File;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import net.milkbowl.vault.economy.Economy;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -16,7 +22,9 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.command.Command;
+import org.bukkit.command.CommandMap;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -29,20 +37,22 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.RegisteredServiceProvider;
+import org.bukkit.plugin.SimplePluginManager;
 
 public class TPControl extends JavaPlugin implements Listener {
     Logger log = Logger.getLogger("Minecraft");
-    
+
     //private final TPControlListener cmdlistener = new TPControlListener(this);
     public final Configuration config = new Configuration(this);
-    
+
     private HashMap<String,User> user_cache = new HashMap<String, User>();
     public HashMap<Player, WarpTask> warp_warmups = new HashMap<Player, WarpTask>();
 
     public Economy economy = null;
-    
+
     @Override
     public void onEnable(){
         log = this.getLogger();
@@ -58,7 +68,7 @@ public class TPControl extends JavaPlugin implements Listener {
         //Listen to events
         PluginManager pm = getServer().getPluginManager();
         pm.registerEvents(this, this);
-        
+
         //Load config
         File config_file = new File(getDataFolder(), "config.yml");
         if(!config_file.exists()) {
@@ -66,7 +76,7 @@ public class TPControl extends JavaPlugin implements Listener {
             saveConfig();
         }
         config.load();
-        
+
         //TODO: Can we get away with async?
         getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
             public void run() {
@@ -75,15 +85,15 @@ public class TPControl extends JavaPlugin implements Listener {
                 }
             }
         }, config.SAVE_INTERVAL*20, config.SAVE_INTERVAL*20);
-        
+
         log.info("TPControl has been enabled!");
     }
-    
+
     @Override
     public void onDisable(){
         log.info("TPControl has been disabled.");
     }
-    
+
     public Player getPlayer(String name) {
         Collection<? extends Player> players = getServer().getOnlinePlayers();
 
@@ -102,12 +112,12 @@ public class TPControl extends JavaPlugin implements Listener {
         }
         return found;
     }
-    
+
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerTeleport(PlayerTeleportEvent event) {
         if (event.isCancelled())
             return;
-        
+
         if (event.getPlayer().hasPermission("tpcontrol.back") &&
             (event.getCause() == PlayerTeleportEvent.TeleportCause.PLUGIN || event.getCause() == PlayerTeleportEvent.TeleportCause.COMMAND)
         ) {
@@ -115,9 +125,9 @@ public class TPControl extends JavaPlugin implements Listener {
             u.setLastLocation(event.getFrom());
         }
     }
-    
+
     @EventHandler(priority = EventPriority.HIGHEST)
-    public void onPlayerInteract(PlayerInteractEvent event) { 
+    public void onPlayerInteract(PlayerInteractEvent event) {
         if (event.getClickedBlock() == null || event.getAction() != Action.RIGHT_CLICK_BLOCK) {
             return;
         }
@@ -149,7 +159,7 @@ public class TPControl extends JavaPlugin implements Listener {
             }
         }
     }
-    
+
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerMove(PlayerMoveEvent event) {
         Player p1 = event.getPlayer();
@@ -192,20 +202,6 @@ public class TPControl extends JavaPlugin implements Listener {
         }
     }
 
-    @EventHandler
-    public void onCommandPreProcess(PlayerCommandPreprocessEvent event) {
-        String message = event.getMessage();
-        for (Warp warp : config.WARPS.values()) {
-            for (String shortcut : warp.getShortcuts()) {
-                if (message.toLowerCase().startsWith("/" + shortcut.toLowerCase())) {
-                    Command command = new GhostCommand("warp");
-                    onCommand(event.getPlayer(), command, shortcut, new String[]{warp.getName()});
-                    event.setCancelled(true);
-                }
-            }
-        }
-    }
-
     @Override
     public boolean onCommand(CommandSender sender, Command command, String name, String[] args) {
         //
@@ -231,36 +227,36 @@ public class TPControl extends JavaPlugin implements Listener {
                 messagePlayer(p1, "You do not have permission.", ChatColor.RED);
                 return true;
             }
-            
+
             if(args.length != 1) {
                 messagePlayer(p1, "Usage: /tp <player>", ChatColor.GOLD);
                 return true;
             }
-            
+
             Player p2 = getPlayer(args[0]);
             if(p2 == null) {
                 messagePlayer(p1, "Couldn't find player "+ args[0], ChatColor.RED);
                 return true;
             }
-            
+
             User u2 = getUser(p2);
             String mode;
-            
+
             if(canOverride(p1, p2)) {
                 mode = "allow";
             } else {
                 mode = u2.getCalculatedMode(p1); //Get the mode to operate under (allow/ask/deny)
             }
-            
-            
+
+
             if (mode.equals("allow")) {
                 messagePlayer(p1, "Teleporting you to " + p2.getName() + ".", ChatColor.GREEN);
                 teleport(p1, p2);
-            } 
+            }
             else if (mode.equals("ask")) {
                 messagePlayer(p1, "A request has been sent to " + p2.getName() + ".", ChatColor.GREEN);
                 u2.lodgeRequest(p1);
-            } 
+            }
             else if (mode.equals("deny")) {
                 messagePlayer(p1, p2.getName() + " has teleportation disabled.", ChatColor.RED);
             }
@@ -285,7 +281,7 @@ public class TPControl extends JavaPlugin implements Listener {
             User u = getUser(p);
 
             Location l = u.getLastLocation();
-            
+
             if (l != null) {
                 u.setLastLocation(null);
                 p.teleport(l);
@@ -304,12 +300,12 @@ public class TPControl extends JavaPlugin implements Listener {
                 sender.sendMessage("This cannot be run from the console!");
                 return true;
             }
-            
+
             if (args.length < 3 || args.length > 4) {
                 sender.sendMessage("Invalid paramaters. Syntax: /tppos [world] x y z");
                 return true;
             }
-            
+
             Player p = (Player)sender;
             World w = null;
             if (args.length == 4) {
@@ -323,9 +319,9 @@ public class TPControl extends JavaPlugin implements Listener {
             else {
                 w = p.getWorld();
             }
-            
+
             double x, y, z;
-            
+
             try {
                 x = Double.parseDouble(args[0]);
                 y = Double.parseDouble(args[1]);
@@ -334,9 +330,9 @@ public class TPControl extends JavaPlugin implements Listener {
                 sender.sendMessage("Invalid paramaters. Syntax: /tppos [world] x y z");
                 return true;
             }
-            
+
             p.teleport(new Location(w, x, y, z));
-            
+
             return true;
         }
         //
@@ -347,26 +343,26 @@ public class TPControl extends JavaPlugin implements Listener {
                 sender.sendMessage("This cannot be run from the console!");
                 return true;
             }
-            
-            
+
+
             Player p2 = (Player)sender;
-            
+
             if(!canTP(p2)) {
                 messagePlayer(p2, "You do not have permission.", ChatColor.RED);
                 return true;
             }
-            
+
             if(args.length != 1) {
                 messagePlayer(p2, "Usage: /tphere <player>", ChatColor.GOLD);
                 return true;
             }
-            
+
             Player p1 = getPlayer(args[0]);
             if(p1 == null) {
                 messagePlayer(p2, "Couldn't find player "+ args[0], ChatColor.RED);
                 return true;
             }
-            
+
             if(canTP(p2) && canOverride(p2, p1)) {
                 messagePlayer(p1, p2.getName() + " teleported you to them.", ChatColor.GREEN);
                 messagePlayer(p2, "Teleporting " + p1.getName() + " to you.", ChatColor.GREEN);
@@ -386,14 +382,14 @@ public class TPControl extends JavaPlugin implements Listener {
                 return true;
             }
             Player p2 = (Player)sender;
-            
+
             if(!canTP(p2)) {
                 messagePlayer(p2, "You do not have permission.", ChatColor.RED);
                 return true;
             }
-            
+
             User u2 = getUser(p2);
-            
+
             if(args.length != 1 || (!args[0].equals("allow") &&
                                     !args[0].equals("ask") &&
                                     !args[0].equals("deny"))) {
@@ -414,12 +410,12 @@ public class TPControl extends JavaPlugin implements Listener {
                 return true;
             }
             Player p2 = (Player)sender;
-            
+
             if(!canTP(p2)) {
                 messagePlayer(p2, "You do not have permission." , ChatColor.RED);
                 return true;
             }
-            
+
             User u2 = getUser(p2);
 
             //Check the field exists...
@@ -427,28 +423,28 @@ public class TPControl extends JavaPlugin implements Listener {
                 messagePlayer(p2, "Error: No one has attempted to tp to you lately!", ChatColor.RED);
                 return true;
             }
-            
+
             //Check it hasn't expired
             Date t = new Date();
             if(t.getTime() > u2.last_applicant_time + 1000L*config.ASK_EXPIRE) {
                 messagePlayer(p2, "Error: /tp request has expired!", ChatColor.RED);
                 return true;
             }
-            
-            
+
+
             Player p1 = getPlayer(u2.last_applicant);
-            
+
             if(p1 == null) {
                 messagePlayer(p2, "Error: "+u2.last_applicant+" is no longer online.");
                 return true;
             }
-            
+
             u2.last_applicant = null;
             messagePlayer(p1, "Teleporting you to " + p2.getName() + ".", ChatColor.GREEN);
             messagePlayer(p2, "Teleporting " + p1.getName() + " to you.", ChatColor.GREEN);
             teleport(p1, p2);
-            
-            
+
+
             return true;
         }
         //
@@ -459,26 +455,26 @@ public class TPControl extends JavaPlugin implements Listener {
                 sender.sendMessage("This cannot be run from the console!");
                 return true;
             }
-            
+
             Player p2 = (Player)sender;
-            
+
             if(!canTP(p2)) {
                 messagePlayer(p2, "You do not have permission.", ChatColor.RED);
                 return true;
             }
-            
+
             User u2 = getUser(p2);
 
             if(u2.last_applicant == null) {
                 messagePlayer(p2, "Error: No one has attempted to tp to you lately!", ChatColor.RED);
                 return true;
             }
-            
-            
+
+
             messagePlayer(p2, "Denied a request from "+u2.last_applicant+".", ChatColor.RED);
             messagePlayer(p2, "Use '/tpblock "+u2.last_applicant+"' to block further requests", ChatColor.RED);
             u2.last_applicant = null;
-            
+
             return true;
         }
         //
@@ -490,12 +486,12 @@ public class TPControl extends JavaPlugin implements Listener {
                 return true;
             }
             Player p2 = (Player)sender;
-            
+
             if(!canTP(p2)) {
                 messagePlayer(p2, "You do not have permission.", ChatColor.RED);
                 return true;
             }
-            
+
             User u2 = getUser(p2);
             if(args.length != 1) {
                 messagePlayer(p2, "Usage: /tpfriend <player>", ChatColor.GOLD);
@@ -518,12 +514,12 @@ public class TPControl extends JavaPlugin implements Listener {
             }
 
             Player p2 = (Player)sender;
-            
+
             if(!canTP(p2)) {
                 messagePlayer(p2, "You do not have permission.", ChatColor.RED);
                 return true;
             }
-            
+
             User u2 = getUser(p2);
             if(args.length != 1) {
                 messagePlayer(p2, "Usage: /tpunfriend <player>", ChatColor.RED);
@@ -545,12 +541,12 @@ public class TPControl extends JavaPlugin implements Listener {
                 return true;
             }
             Player p2 = (Player)sender;
-            
+
             if(!canTP(p2)) {
                 messagePlayer(p2, "You do not have permission.", ChatColor.RED);
                 return true;
             }
-            
+
             User u2 = getUser(p2);
             if(args.length != 1) {
                 messagePlayer(p2, "Usage: /tpblock <player>", ChatColor.GOLD);
@@ -573,12 +569,12 @@ public class TPControl extends JavaPlugin implements Listener {
             }
 
             Player p2 = (Player)sender;
-            
+
             if(!canTP(p2)) {
                 messagePlayer(p2, "You do not have permission.", ChatColor.RED);
                 return true;
             }
-            
+
             User u2 = getUser(p2);
             if(args.length != 1) {
                 messagePlayer(p2, "Usage: /tpunblock <player>", ChatColor.GOLD);
@@ -819,12 +815,27 @@ public class TPControl extends JavaPlugin implements Listener {
                 w1.setAllowBack(allowBack);
                 messagePlayer(p2, "Set allow-back for warp " + args[0], ChatColor.GOLD);
             }
+            else if (option.equalsIgnoreCase("public")) {
+                if (args.length != 3) {
+                    messagePlayer(p2, "Usage: /setwarp <name> public <true/false>", ChatColor.RED);
+                    return true;
+                }
+                boolean pub = Boolean.parseBoolean(args[2]);
+                w1.setPublic(pub);
+                messagePlayer(p2, "Set public to " + pub + " for warp " + args[0], ChatColor.GOLD);
+            }
             else if (option.equalsIgnoreCase("shortcuts")) {
                 List<String> shortcuts = new ArrayList<String>();
                 for (int i = 2; i < args.length; i++) {
                     shortcuts.add(args[i]);
                 }
                 w1.setShortcuts(shortcuts);
+                for (String shortcut : shortcuts) {
+                    ShortcutCommand shortcutCommand = new ShortcutCommand(shortcut, this, w1);
+                    registerCommand(new String[] { shortcut });
+                    getCommand(shortcut).setExecutor(shortcutCommand);
+                }
+
                 messagePlayer(p2, "Set shortcuts for warp " + args[0], ChatColor.GOLD);
             }
 
@@ -906,7 +917,7 @@ public class TPControl extends JavaPlugin implements Listener {
 
         return false;
     }
-    
+
     //Pull a user from the cache, or create it if necessary
     public User getUser(Player p) {
         User u = user_cache.get(p.getName().toLowerCase());
@@ -916,7 +927,7 @@ public class TPControl extends JavaPlugin implements Listener {
         }
         return u;
     }
-    
+
     //Checks if p1 can override p2
     private boolean canOverride(Player p1, Player p2) {
         for(int j = config.GROUPS.size() - 1; j >= 0; j--){
@@ -944,18 +955,18 @@ public class TPControl extends JavaPlugin implements Listener {
     }
 
     private boolean canWarp(Player p1, Warp w1) {
-        return (p1.hasPermission("tpcontrol.warp.*") || p1.hasPermission("tpcontrol.warp." + w1.getName()));
+        return (p1.hasPermission("tpcontrol.warp.*") || p1.hasPermission("tpcontrol.warp." + w1.getName())) || w1.isPublic();
     }
 
     public void messagePlayer(Player p, String m) {
         messagePlayer(p, m, ChatColor.GRAY);
     }
-    
+
     public void messagePlayer(Player p, String m, ChatColor color) {
 //        p.sendMessage(ChatColor.GRAY + "[TP] " + color + m);
         p.sendMessage(color + m);
     }
-    
+
     private void teleport(Player p1, Player p2) {
         Location loc = p2.getLocation();
         if(p2.isFlying() && !p1.isFlying()) {
@@ -977,7 +988,39 @@ public class TPControl extends JavaPlugin implements Listener {
                 loc.setY(loc.getY() - 1);
             }
         }
-        
+
         p1.teleport(loc);
+    }
+
+    public void registerCommand(String... aliases) {
+        PluginCommand command = getNewCommand(aliases[0]);
+        command.setAliases(Arrays.asList(aliases));
+        getCommandMap().register(getDescription().getName(), command);
+    }
+
+    private PluginCommand getNewCommand(String name) {
+        PluginCommand command = null;
+        try {
+            Constructor<PluginCommand> c = PluginCommand.class.getDeclaredConstructor(new Class[] { String.class, Plugin.class });
+            c.setAccessible(true);
+            command = (PluginCommand) c.newInstance(new Object[]{name, this});
+        } catch (Exception ex) {
+            getLogger().log(Level.WARNING, "exception creating command", ex);
+        }
+        return command;
+    }
+
+    private CommandMap getCommandMap() {
+        CommandMap commandMap = null;
+        try {
+            if ((Bukkit.getPluginManager() instanceof SimplePluginManager)) {
+                Field f = SimplePluginManager.class.getDeclaredField("commandMap");
+                f.setAccessible(true);
+                commandMap = (CommandMap) f.get(Bukkit.getPluginManager());
+            }
+        } catch (Exception ex) {
+            getLogger().log(Level.WARNING, "exception getting command map", ex);
+        }
+        return commandMap;
     }
 }

@@ -7,14 +7,15 @@ import java.util.Map;
 import java.util.TreeMap;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.ConfigurationSection;
 
 public class Configuration {
     public static String[] relationships = {"blocked", "default", "friends"};
     public static String[] modes = {"deny", "ask", "allow"};
-    
+
     private final TPControl plugin;
-    
+
     public String MIN_GROUP;
     public String DEFAULT_MODE;
     public int ASK_EXPIRE;
@@ -35,7 +36,7 @@ public class Configuration {
 
         MODE_MAP = new HashMap<String, String>();
         WARPS = new TreeMap<String, Warp>();
-        
+
         String key;
         for(String m : modes) {
             for(String r : relationships) {
@@ -48,7 +49,7 @@ public class Configuration {
                 }
             }
         }
-        
+
         DEFAULT_MODE = plugin.getConfig().getString("default-mode");
         MIN_GROUP = plugin.getConfig().getString("min-group");
         ASK_EXPIRE = plugin.getConfig().getInt("ask-expire");
@@ -115,6 +116,11 @@ public class Configuration {
                         }
 
                         WARPS.put(warpName.toLowerCase(), warp);
+                        for (String shortcut : shortcuts) {
+                            ShortcutCommand shortcutCommand = new ShortcutCommand(shortcut, this.plugin, warp);
+                            this.plugin.registerCommand(new String[]{shortcut});
+                            this.plugin.getCommand(shortcut).setExecutor(shortcutCommand);
+                        }
                     }
                 }
             }
