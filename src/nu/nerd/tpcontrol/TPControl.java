@@ -285,9 +285,11 @@ public class TPControl extends JavaPlugin implements Listener {
             if (l != null) {
                 u.setLastLocation(null);
                 p.teleport(l);
+                return true;
             }
             else {
                 p.sendMessage(ChatColor.RED + "No last location saved for you.");
+                return true;
             }
 
             return true;
