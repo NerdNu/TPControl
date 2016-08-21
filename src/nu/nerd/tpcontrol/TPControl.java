@@ -591,31 +591,8 @@ public class TPControl extends JavaPlugin implements Listener {
         // /warps
         //
         else if (command.getName().equalsIgnoreCase("warps")) {
-            Player player = null;
-            if (sender instanceof Player)
-                player = (Player)sender;
-
-            StringBuilder sb = new StringBuilder();
-            int j = 0;
-            Iterator i = this.config.WARPS.values().iterator();
-            while (i.hasNext()) {
-                Warp warp = (Warp) i.next();
-
-                if (player == null || canWarp(player, warp)) {
-                    if (j % 2 == 0)
-                        sb.append(ChatColor.GRAY);
-                    else
-                        sb.append(ChatColor.WHITE);
-
-                    sb.append(warp.getName()).append(", ");
-                    j++;
-                }
-            }
-            String list = sb.toString();
-            if (list.length() >= 2)
-                list = list.substring(0, list.length() - 2);
-
-            sender.sendMessage(ChatColor.GOLD + "Warps: " + list);
+            cmdWarps(sender);
+            return true;
         }
         //
         // /warp <warp>
@@ -627,6 +604,11 @@ public class TPControl extends JavaPlugin implements Listener {
             }
 
             final Player p2 = (Player)sender;
+            
+            if(args.length == 0) {
+            	cmdWarps(sender);
+            	return true;
+            }
 
             if(args.length != 1) {
                 messagePlayer(p2, "Usage: /warp <warp>", ChatColor.GOLD);
@@ -917,6 +899,40 @@ public class TPControl extends JavaPlugin implements Listener {
 
         return false;
     }
+
+	/**
+	 * 
+	 * Handle the /warps command
+	 * 
+	 * @param sender
+	 */
+	private void cmdWarps(CommandSender sender) {
+		Player player = null;
+		if (sender instanceof Player)
+		    player = (Player)sender;
+
+		StringBuilder sb = new StringBuilder();
+		int j = 0;
+		Iterator i = this.config.WARPS.values().iterator();
+		while (i.hasNext()) {
+		    Warp warp = (Warp) i.next();
+
+		    if (player == null || canWarp(player, warp)) {
+		        if (j % 2 == 0)
+		            sb.append(ChatColor.GRAY);
+		        else
+		            sb.append(ChatColor.WHITE);
+
+		        sb.append(warp.getName()).append(", ");
+		        j++;
+		    }
+		}
+		String list = sb.toString();
+		if (list.length() >= 2)
+		    list = list.substring(0, list.length() - 2);
+
+		sender.sendMessage(ChatColor.GOLD + "Warps: " + list);
+	}
 
     //Pull a user from the cache, or create it if necessary
     public User getUser(Player p) {
