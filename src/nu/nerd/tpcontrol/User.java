@@ -85,16 +85,16 @@ public class User {
         return yaml.getStringList(name);
     }
 
-    private boolean addToList(String name, String username) {
+    @SuppressWarnings("deprecation")
+	private boolean addToList(String name, String username) {
         List<String> l = getList(name);
 
         String uuid = null;
         Player perp = plugin.getPlayer(username);
         if (perp != null)
             uuid = perp.getUniqueId().toString();
-        else
+        else 
             uuid = Bukkit.getOfflinePlayer(username).getUniqueId().toString();
-
         if(l.contains(uuid)) {
             return false;
         }
@@ -105,7 +105,8 @@ public class User {
         return true;
     }
 
-    private boolean delFromList(String name, String username) {
+    @SuppressWarnings("deprecation")
+	private boolean delFromList(String name, String username) {
         List<String> l = getList(name);
 
         String uuid = null;

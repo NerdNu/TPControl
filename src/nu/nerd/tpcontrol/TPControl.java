@@ -31,7 +31,6 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -913,7 +912,7 @@ public class TPControl extends JavaPlugin implements Listener {
 
 		StringBuilder sb = new StringBuilder();
 		int j = 0;
-		Iterator i = this.config.WARPS.values().iterator();
+		Iterator<Warp> i = this.config.WARPS.values().iterator();
 		while (i.hasNext()) {
 		    Warp warp = (Warp) i.next();
 

@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.ConfigurationSection;
 
 public class Configuration {
