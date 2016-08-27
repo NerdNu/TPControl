@@ -203,701 +203,418 @@ public class TPControl extends JavaPlugin implements Listener {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String name, String[] args) {
-        //
-        // /tp
-        //
-        if (command.getName().equalsIgnoreCase("tpcontrol")) {
-            if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
-                config.load();
-                sender.sendMessage("Reloaded config.");
-                return true;
-            }
-        }
-        //
-        // /tp
-        //
-        else if (command.getName().equalsIgnoreCase("tp")) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage("This cannot be run from the console!");
-                return true;
-            }
-            Player p1 = (Player)sender;
-            if(!canTP(p1)) {
-                messagePlayer(p1, "You do not have permission.", ChatColor.RED);
-                return true;
-            }
 
-            if(args.length != 1) {
-                messagePlayer(p1, "Usage: /tp <player>", ChatColor.GOLD);
-                return true;
-            }
-
-            Player p2 = getPlayer(args[0]);
-            if(p2 == null) {
-                messagePlayer(p1, "Couldn't find player "+ args[0], ChatColor.RED);
-                return true;
-            }
-
-            User u2 = getUser(p2);
-            String mode;
-
-            if(canOverride(p1, p2)) {
-                mode = "allow";
-            } else {
-                mode = u2.getCalculatedMode(p1); //Get the mode to operate under (allow/ask/deny)
-            }
-
-
-            if (mode.equals("allow")) {
-                messagePlayer(p1, "Teleporting you to " + p2.getName() + ".", ChatColor.GREEN);
-                teleport(p1, p2);
-            }
-            else if (mode.equals("ask")) {
-                messagePlayer(p1, "A request has been sent to " + p2.getName() + ".", ChatColor.GREEN);
-                u2.lodgeRequest(p1);
-            }
-            else if (mode.equals("deny")) {
-                messagePlayer(p1, p2.getName() + " has teleportation disabled.", ChatColor.RED);
-            }
-            return true;
-        }
-        //
-        // /back
-        //
-        else if (command.getName().equalsIgnoreCase("back")) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage("This cannot be run from the console!");
-                return true;
-            }
-
-            Player p = (Player)sender;
-
-            if (!p.hasPermission("tpcontrol.back")) {
-                messagePlayer(p, "You do not have permission.", ChatColor.RED);
-                return true;
-            }
-
-            User u = getUser(p);
-
-            Location l = u.getLastLocation();
-
-            if (l != null) {
-                u.setLastLocation(null);
-                p.teleport(l);
-            }
-            else {
-                p.sendMessage(ChatColor.RED + "No last location saved for you.");
-            }
-
-            return true;
-        }
-        //
-        // /tppos [world] x y z
-        //
-        else if (command.getName().equalsIgnoreCase("tppos")) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage("This cannot be run from the console!");
-                return true;
-            }
-
-            if (args.length < 3 || args.length > 4) {
-                sender.sendMessage("Invalid paramaters. Syntax: /tppos [world] x y z");
-                return true;
-            }
-
-            Player p = (Player)sender;
-            World w = null;
-            if (args.length == 4) {
-                w = getServer().getWorld(args[0]);
-                args = new String[] { args[1], args[2], args[3] };
-                if (w == null) {
-                    sender.sendMessage(ChatColor.RED + "An invalid world was provided.");
-                    return true;
-                }
-            }
-            else {
-                w = p.getWorld();
-            }
-
-            double x, y, z;
-
-            try {
-                x = Double.parseDouble(args[0]);
-                y = Double.parseDouble(args[1]);
-                z = Double.parseDouble(args[2]);
-            } catch (NumberFormatException ex) {
-                sender.sendMessage("Invalid paramaters. Syntax: /tppos [world] x y z");
-                return true;
-            }
-
-            p.teleport(new Location(w, x, y, z));
-
-            return true;
-        }
-        //
-        // /tphere <player>
-        //
-        else if (command.getName().equalsIgnoreCase("tphere")) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage("This cannot be run from the console!");
-                return true;
-            }
-
-
-            Player p2 = (Player)sender;
-
-            if(!canTP(p2)) {
-                messagePlayer(p2, "You do not have permission.", ChatColor.RED);
-                return true;
-            }
-
-            if(args.length != 1) {
-                messagePlayer(p2, "Usage: /tphere <player>", ChatColor.GOLD);
-                return true;
-            }
-
-            Player p1 = getPlayer(args[0]);
-            if(p1 == null) {
-                messagePlayer(p2, "Couldn't find player "+ args[0], ChatColor.RED);
-                return true;
-            }
-
-            if(canTP(p2) && canOverride(p2, p1)) {
-                messagePlayer(p1, p2.getName() + " teleported you to them.", ChatColor.GREEN);
-                messagePlayer(p2, "Teleporting " + p1.getName() + " to you.", ChatColor.GREEN);
-                teleport(p1, p2);
-                return true;
-            } else {
-                messagePlayer(p2, "You do not have permission.", ChatColor.RED);
-                return true;
-            }
-        }
-        //
-        // /tpmode allow|ask|deny
-        //
-        else if (command.getName().equalsIgnoreCase("tpmode")) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage("This cannot be run from the console!");
-                return true;
-            }
-            Player p2 = (Player)sender;
-
-            if(!canTP(p2)) {
-                messagePlayer(p2, "You do not have permission.", ChatColor.RED);
-                return true;
-            }
-
-            User u2 = getUser(p2);
-
-            if(args.length != 1 || (!args[0].equals("allow") &&
-                                    !args[0].equals("ask") &&
-                                    !args[0].equals("deny"))) {
-                messagePlayer(p2, "Usage: /tpmode allow|ask|deny", ChatColor.GOLD);
-                messagePlayer(p2, "You are currently in " + u2.getMode().toUpperCase() + " mode.", ChatColor.GOLD);
-            } else {
-                u2.setMode(args[0]);
-                messagePlayer(p2, "You are now in " + args[0].toUpperCase() + " mode.", ChatColor.GOLD);
-            }
-            return true;
-        }
-        //
-        // /tpallow
-        //
-        else if (command.getName().equalsIgnoreCase("tpallow")) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage("This cannot be run from the console!");
-                return true;
-            }
-            Player p2 = (Player)sender;
-
-            if(!canTP(p2)) {
-                messagePlayer(p2, "You do not have permission." , ChatColor.RED);
-                return true;
-            }
-
-            User u2 = getUser(p2);
-
-            //Check the field exists...
-            if(u2.last_applicant == null) {
-                messagePlayer(p2, "Error: No one has attempted to tp to you lately!", ChatColor.RED);
-                return true;
-            }
-
-            //Check it hasn't expired
-            Date t = new Date();
-            if(t.getTime() > u2.last_applicant_time + 1000L*config.ASK_EXPIRE) {
-                messagePlayer(p2, "Error: /tp request has expired!", ChatColor.RED);
-                return true;
-            }
-
-
-            Player p1 = getPlayer(u2.last_applicant);
-
-            if(p1 == null) {
-                messagePlayer(p2, "Error: "+u2.last_applicant+" is no longer online.");
-                return true;
-            }
-
-            u2.last_applicant = null;
-            messagePlayer(p1, "Teleporting you to " + p2.getName() + ".", ChatColor.GREEN);
-            messagePlayer(p2, "Teleporting " + p1.getName() + " to you.", ChatColor.GREEN);
-            teleport(p1, p2);
-
-
-            return true;
-        }
-        //
-        // /tpdeny
-        //
-        else if (command.getName().equalsIgnoreCase("tpdeny")) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage("This cannot be run from the console!");
-                return true;
-            }
-
-            Player p2 = (Player)sender;
-
-            if(!canTP(p2)) {
-                messagePlayer(p2, "You do not have permission.", ChatColor.RED);
-                return true;
-            }
-
-            User u2 = getUser(p2);
-
-            if(u2.last_applicant == null) {
-                messagePlayer(p2, "Error: No one has attempted to tp to you lately!", ChatColor.RED);
-                return true;
-            }
-
-
-            messagePlayer(p2, "Denied a request from "+u2.last_applicant+".", ChatColor.RED);
-            messagePlayer(p2, "Use '/tpblock "+u2.last_applicant+"' to block further requests", ChatColor.RED);
-            u2.last_applicant = null;
-
-            return true;
-        }
-        //
-        // /tpfriend <player>
-        //
-        else if (command.getName().equalsIgnoreCase("tpfriend")) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage("This cannot be run from the console!");
-                return true;
-            }
-            Player p2 = (Player)sender;
-
-            if(!canTP(p2)) {
-                messagePlayer(p2, "You do not have permission.", ChatColor.RED);
-                return true;
-            }
-
-            User u2 = getUser(p2);
-            if(args.length != 1) {
-                messagePlayer(p2, "Usage: /tpfriend <player>", ChatColor.GOLD);
-                return true;
-            }
-            if(u2.addFriend(args[0])) {
-                messagePlayer(p2, args[0] + " added as a friend.", ChatColor.GREEN);
-            } else {
-                messagePlayer(p2, "Error: " + args[0] + " is already a friend.", ChatColor.GOLD);
-            }
-            return true;
-        }
-        //
-        // /tpunfriend <player>
-        //
-        else if (command.getName().equalsIgnoreCase("tpunfriend")) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage("This cannot be run from the console!");
-                return true;
-            }
-
-            Player p2 = (Player)sender;
-
-            if(!canTP(p2)) {
-                messagePlayer(p2, "You do not have permission.", ChatColor.RED);
-                return true;
-            }
-
-            User u2 = getUser(p2);
-            if(args.length != 1) {
-                messagePlayer(p2, "Usage: /tpunfriend <player>", ChatColor.RED);
-                return true;
-            }
-            if(u2.delFriend(args[0])) {
-                messagePlayer(p2, args[0] + " removed from friends.", ChatColor.GREEN);
-            } else {
-                messagePlayer(p2, "Error: " + args[0] + " not on friends list.", ChatColor.GOLD);
-            }
-            return true;
-        }
-        //
-        // /tpblock <player>
-        //
-        else if (command.getName().equalsIgnoreCase("tpblock")) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage("This cannot be run from the console!");
-                return true;
-            }
-            Player p2 = (Player)sender;
-
-            if(!canTP(p2)) {
-                messagePlayer(p2, "You do not have permission.", ChatColor.RED);
-                return true;
-            }
-
-            User u2 = getUser(p2);
-            if(args.length != 1) {
-                messagePlayer(p2, "Usage: /tpblock <player>", ChatColor.GOLD);
-                return true;
-            }
-            if(u2.addBlocked(args[0])) {
-                messagePlayer(p2, args[0] + " was blocked from teleporting to you.", ChatColor.GREEN);
-            } else {
-                messagePlayer(p2, "Error: " + args[0] + " is already blocked.", ChatColor.GOLD);
-            }
-            return true;
-        }
-        //
-        // /tpunblock <player>
-        //
-        else if (command.getName().equalsIgnoreCase("tpunblock")) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage("This cannot be run from the console!");
-                return true;
-            }
-
-            Player p2 = (Player)sender;
-
-            if(!canTP(p2)) {
-                messagePlayer(p2, "You do not have permission.", ChatColor.RED);
-                return true;
-            }
-
-            User u2 = getUser(p2);
-            if(args.length != 1) {
-                messagePlayer(p2, "Usage: /tpunblock <player>", ChatColor.GOLD);
-                return true;
-            }
-            if(u2.delBlocked(args[0])) {
-                messagePlayer(p2, args[0] + " was unblocked from teleporting to you.", ChatColor.GREEN);
-            } else {
-                messagePlayer(p2, "Error: " + args[0] + " is not blocked.", ChatColor.GOLD);
-            }
-            return true;
-        }
-        //
-        // /warps
-        //
-        else if (command.getName().equalsIgnoreCase("warps")) {
-            cmdWarps(sender);
-            return true;
-        }
-        //
-        // /warp <warp>
-        //
-        else if (command.getName().equalsIgnoreCase("warp")) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage("This cannot be run from the console!");
-                return true;
-            }
-
-            final Player p2 = (Player)sender;
-            
-            if(args.length == 0) {
-            	cmdWarps(sender);
-            	return true;
-            }
-
-            if(args.length != 1) {
-                messagePlayer(p2, "Usage: /warp <warp>", ChatColor.GOLD);
-                return true;
-            }
-
-            final Warp w1 = this.config.WARPS.get(args[0].toLowerCase());
-
-            if(w1 == null) {
-                messagePlayer(p2, "That warp does not exist.", ChatColor.RED);
-                return true;
-            }
-
-            if(!canWarp(p2, w1)) {
-                messagePlayer(p2, "You do not have permission.", ChatColor.RED);
-                return true;
-            }
-
-            if(economy != null) {
-                boolean low_en = w1.getBalanceMin() != null;
-                boolean low = low_en;
-                if (low_en)
-                    low = economy.getBalance(p2) >= w1.getBalanceMin();
-
-                boolean high_en = w1.getBalanceMax() != null;
-                boolean high = high_en;
-                if (high_en)
-                    high = economy.getBalance(p2) <= w1.getBalanceMax();
-
-                if (low_en && low) {
-                    messagePlayer(p2, "Your balance is too low.", ChatColor.RED);
-                }
-                if (high_en && high) {
-                    messagePlayer(p2, "Your balance is too high.", ChatColor.RED);
-                }
-
-                if (low_en && !low || high_en && !high) {
-                    return true;
-                }
-            }
-
-            Date now = new Date();
-            Date p2cd = w1.getCooldown(p2);
-            if (p2cd != null && !now.after(new Date(p2cd.getTime() + w1.getCooldown() * 1000))) {
-                messagePlayer(p2, "You must wait ", ChatColor.RED);
-                return true;
-            }
-
-            if (w1.getWarmup() > 0) {
-                Date p2wu = w1.getWarmup(p2);
-                if (p2wu != null) {
-                    int elapsed = (int) ((now.getTime() - p2wu.getTime()) / 1000);
-                    int remaining = w1.getWarmup() - elapsed;
-                    messagePlayer(p2, "You have " + remaining + " second(s) of warmup remaining.", ChatColor.RED);
-
-                    return true;
-                }
-                else {
-                    messagePlayer(p2, "There is a " + w1.getWarmup() + " second warmup for this warp.", ChatColor.RED);
-                    if (w1.doesWarmupCancelOnMove()) {
-                        messagePlayer(p2, "You must not move during this time", ChatColor.RED);
-                    }
-
-                    WarpTask warpTask = new WarpTask(this, w1, p2);
-                    this.warp_warmups.put(p2, warpTask);
-                    warpTask.runTaskLater(this, w1.getWarmup() * 20);
-
-                    w1.setWarmup(p2, now);
-
-                    return true;
-                }
-            }
-
-            if (w1.allowBack) {
-                User u = getUser(p2);
-                u.setLastLocation(p2.getLocation());
-            }
-
-            p2.teleport(w1.getLocation());
-            return true;
-        }
-        //
-        // /setwarp <name>
-        //
-        else if (command.getName().equalsIgnoreCase("setwarp")) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage("This cannot be run from the console!");
-                return true;
-            }
-
-            final Player p2 = (Player)sender;
-
-            if(!p2.hasPermission("tpcontrol.setwarp")) {
-                messagePlayer(p2, "You do not have permission.", ChatColor.RED);
-                return true;
-            }
-
-            if(args.length < 1) {
-                messagePlayer(p2, "Usage: /setwarp <name> [option] [values...]", ChatColor.GOLD);
-                return true;
-            }
-
-            Warp w1 = this.config.WARPS.get(args[0].toLowerCase());
-
-            if (w1 == null) {
-                w1 = new Warp(args[0], p2.getLocation());
-                this.config.WARPS.put(args[0].toLowerCase(), w1);
-            }
-
-            String option = "location";
-            if (args.length >= 2) {
-                option = args[1];
-            }
-
-            if (option.equalsIgnoreCase("location")) {
-                w1.setLocation(p2.getLocation());
-                messagePlayer(p2, "Set location for warp " + args[0], ChatColor.GOLD);
-            }
-            else if (option.equalsIgnoreCase("warmup")) {
-                if (args.length != 3) {
-                    messagePlayer(p2, "Usage: /setwarp <name> warmup <number>", ChatColor.RED);
-                    return true;
-                }
-
-                int warmup = Integer.parseInt(args[2]);
-                w1.setWarmup(warmup);
-                messagePlayer(p2, "Set warmup for warp " + args[0], ChatColor.GOLD);
-            }
-            else if (option.equalsIgnoreCase("warmup-cancel-on-move")) {
-                if (args.length != 3) {
-                    messagePlayer(p2, "Usage: /setwarp <name> warmup-cancel-on-move <true/false>", ChatColor.RED);
-                    return true;
-                }
-
-                boolean warmupCancelOnMove = Boolean.parseBoolean(args[2]);
-                w1.setWarmupCancelOnMove(warmupCancelOnMove);
-                messagePlayer(p2, "Set warmup cancel-on-move for warp " + args[0], ChatColor.GOLD);
-            }
-            else if (option.equalsIgnoreCase("warmup-cancel-on-damage")) {
-                if (args.length != 3) {
-                    messagePlayer(p2, "Usage: /setwarp <name> warmup-cancel-on-damage <true/false>", ChatColor.RED);
-                    return true;
-                }
-
-                boolean warmupCancelOnDamage = Boolean.parseBoolean(args[2]);
-                w1.setWarmupCancelOnDamage(warmupCancelOnDamage);
-                messagePlayer(p2, "Set warmup cancel-on-damage for warp " + args[0], ChatColor.GOLD);
-            }
-            else if (option.equalsIgnoreCase("cooldown")) {
-                if (args.length != 3) {
-                    messagePlayer(p2, "Usage: /setwarp <name> cooldown <number>", ChatColor.RED);
-                    return true;
-                }
-
-                int cooldown = Integer.parseInt(args[2]);
-                w1.setCooldown(cooldown);
-                messagePlayer(p2, "Set cooldown for warp " + args[0], ChatColor.GOLD);
-            }
-            else if (option.equalsIgnoreCase("balance-min")) {
-                if (args.length != 3) {
-                    messagePlayer(p2, "Usage: /setwarp <name> balance-min <number>", ChatColor.RED);
-                    return true;
-                }
-
-                int balanceMin = Integer.parseInt(args[2]);
-                w1.setBalanceMin(balanceMin);
-                messagePlayer(p2, "Set min balance for warp " + args[0], ChatColor.GOLD);
-            }
-            else if (option.equalsIgnoreCase("balance-max")) {
-                if (args.length != 3) {
-                    messagePlayer(p2, "Usage: /setwarp <name> balance-max <number>", ChatColor.RED);
-                    return true;
-                }
-
-                int balanceMax = Integer.parseInt(args[2]);
-                w1.setBalanceMax(balanceMax);
-                messagePlayer(p2, "Set max balance for warp " + args[0], ChatColor.GOLD);
-            }
-            else if (option.equalsIgnoreCase("allow-back")) {
-                if (args.length != 3) {
-                    messagePlayer(p2, "Usage: /setwarp <name> allow-back <true/false>", ChatColor.RED);
-                    return true;
-                }
-
-                boolean allowBack = Boolean.parseBoolean(args[2]);
-                w1.setAllowBack(allowBack);
-                messagePlayer(p2, "Set allow-back for warp " + args[0], ChatColor.GOLD);
-            }
-            else if (option.equalsIgnoreCase("public")) {
-                if (args.length != 3) {
-                    messagePlayer(p2, "Usage: /setwarp <name> public <true/false>", ChatColor.RED);
-                    return true;
-                }
-                boolean pub = Boolean.parseBoolean(args[2]);
-                w1.setPublic(pub);
-                messagePlayer(p2, "Set public to " + pub + " for warp " + args[0], ChatColor.GOLD);
-            }
-            else if (option.equalsIgnoreCase("shortcuts")) {
-                List<String> shortcuts = new ArrayList<String>();
-                for (int i = 2; i < args.length; i++) {
-                    shortcuts.add(args[i]);
-                }
-                w1.setShortcuts(shortcuts);
-                for (String shortcut : shortcuts) {
-                    ShortcutCommand shortcutCommand = new ShortcutCommand(shortcut, this, w1);
-                    registerCommand(new String[] { shortcut });
-                    getCommand(shortcut).setExecutor(shortcutCommand);
-                }
-
-                messagePlayer(p2, "Set shortcuts for warp " + args[0], ChatColor.GOLD);
-            }
-
-            getConfig().set("warps." + w1.getName() + ".location.world", w1.getLocation().getWorld().getName());
-            getConfig().set("warps." + w1.getName() + ".location.x", w1.getLocation().getX());
-            getConfig().set("warps." + w1.getName() + ".location.y", w1.getLocation().getY());
-            getConfig().set("warps." + w1.getName() + ".location.z", w1.getLocation().getZ());
-            getConfig().set("warps." + w1.getName() + ".location.yaw", w1.getLocation().getYaw());
-            getConfig().set("warps." + w1.getName() + ".location.pitch", w1.getLocation().getPitch());
-            getConfig().set("warps." + w1.getName() + ".warmup.length", w1.getWarmup());
-            getConfig().set("warps." + w1.getName() + ".warmup.cancel-on-move", w1.doesWarmupCancelOnMove());
-            getConfig().set("warps." + w1.getName() + ".warmup.cancel-on-damage", w1.doesWarmupCancelOnDamage());
-            getConfig().set("warps." + w1.getName() + ".cooldown.length", w1.getCooldown());
-            getConfig().set("warps." + w1.getName() + ".economy.balance.min", w1.getBalanceMin());
-            getConfig().set("warps." + w1.getName() + ".economy.balance.max", w1.getBalanceMax());
-            getConfig().set("warps." + w1.getName() + ".shortcuts", w1.getShortcuts());
-            getConfig().set("warps." + w1.getName() + ".allow-back", w1.doesAllowBack());
-            saveConfig();
-
-            return true;
-        }
-        //
-        // /setwarp <name>
-        //
-        else if (command.getName().equalsIgnoreCase("delwarp")) {
-            if(!sender.hasPermission("tpcontrol.delwarp")) {
-                sender.sendMessage(ChatColor.RED + "You do not have permission.");
-                return true;
-            }
-
-            if(args.length != 1) {
-                sender.sendMessage(ChatColor.RED + "Usage: /delwarp <name>");
-                return true;
-            }
-
-            Warp w1 = this.config.WARPS.get(args[0].toLowerCase());
-
-            if(w1 != null) {
-                this.config.WARPS.remove(args[0].toLowerCase());
-                sender.sendMessage(ChatColor.RED + "Removed warp " + args[0]);
-            }
-            else {
-                sender.sendMessage(ChatColor.RED + "Warp does not exist.");
-            }
-
-            getConfig().set("warps." + args[0], null);
-            saveConfig();
-
-            return true;
-        }
-        //
-        // /cancelwarp
-        //
-        else if (command.getName().equalsIgnoreCase("cancelwarp")) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage("This cannot be run from the console!");
-                return true;
-            }
-
-            final Player p2 = (Player)sender;
-
-            if(!p2.hasPermission("tpcontrol.cancelwarp")) {
-                messagePlayer(p2, "You do not have permission.", ChatColor.RED);
-                return true;
-            }
-
-            if (warp_warmups.containsKey(p2)) {
-                messagePlayer(p2, "Cancelling warp.", ChatColor.RED);
-                WarpTask wt1 = warp_warmups.get(p2);
-                wt1.cancel();
-                warp_warmups.remove(p2);
-
-                return true;
-            }
-
-            messagePlayer(p2, "You have no warp to cancel.", ChatColor.RED);
-            return true;
-        }
-
-        return false;
+    	switch (command.getName().toLowerCase()) {
+		case "tpcontrol": cmdTPControl(sender, args); return true;
+		case "tp": cmdTP(sender, args); return true;
+		case "back": cmdBack(sender); return true;
+		case "tppos": cmdTPPos(sender, args); return true;
+		case "tphere": cmdTPHere(sender, args); return true;
+		case "tpmode": cmdTPMode(sender, args); return true;
+		case "tpallow": cmdTPAllow(sender); return true;
+		case "tpdeny": cmdTPDeny(sender); return true;
+		case "tpfriend": cmdTPFriend(sender, args); return true;
+		case "tpunfriend": cmdTPUnfriend(sender, args); return true;
+		case "tpblock": cmdBlock(sender, args); return true;
+		case "tpunblock": cmdUnblock(sender, args); return true;
+		case "warps": cmdWarps(sender); return true;
+		case "warp": cmdWarp(sender, args); return true;
+		case "setwarp": cmdSetWarp(sender, args); return true;
+		case "delwarp": cmdDelWarp(sender, args); return true;
+		case "cancelwarp": cmdCancelWarp(sender); return true;
+		default: return false;
+    	}
     }
+
+	/**
+	 * @param sender
+	 * @param args
+	 */
+	private void cmdTPControl(CommandSender sender, String[] args) {
+		if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
+		    config.load();
+		    sender.sendMessage("Reloaded config.");
+		    return;
+		}
+	}
+
+	/**
+	 * @param sender
+	 * @param args
+	 */
+	private void cmdTP(CommandSender sender, String[] args) {
+		if (!(sender instanceof Player)) {
+		    sender.sendMessage("This cannot be run from the console!");
+		    return;
+		}
+		Player p1 = (Player)sender;
+		if(!canTP(p1)) {
+		    messagePlayer(p1, "You do not have permission.", ChatColor.RED);
+		    return;
+		}
+	
+		if(args.length != 1) {
+		    messagePlayer(p1, "Usage: /tp <player>", ChatColor.GOLD);
+		    return;
+		}
+	
+		Player p2 = getPlayer(args[0]);
+		if(p2 == null) {
+		    messagePlayer(p1, "Couldn't find player "+ args[0], ChatColor.RED);
+		    return;
+		}
+	
+		User u2 = getUser(p2);
+		String mode;
+	
+		if(canOverride(p1, p2)) {
+		    mode = "allow";
+		} else {
+		    mode = u2.getCalculatedMode(p1); //Get the mode to operate under (allow/ask/deny)
+		}
+	
+	
+		if (mode.equals("allow")) {
+		    messagePlayer(p1, "Teleporting you to " + p2.getName() + ".", ChatColor.GREEN);
+		    teleport(p1, p2);
+		}
+		else if (mode.equals("ask")) {
+		    messagePlayer(p1, "A request has been sent to " + p2.getName() + ".", ChatColor.GREEN);
+		    u2.lodgeRequest(p1);
+		}
+		else if (mode.equals("deny")) {
+		    messagePlayer(p1, p2.getName() + " has teleportation disabled.", ChatColor.RED);
+		}
+	}
+
+	/**
+	 * @param sender
+	 */
+	private void cmdBack(CommandSender sender) {
+		if (!(sender instanceof Player)) {
+		    sender.sendMessage("This cannot be run from the console!");
+		    return;
+		}
+	
+		Player p = (Player)sender;
+	
+		if (!p.hasPermission("tpcontrol.back")) {
+		    messagePlayer(p, "You do not have permission.", ChatColor.RED);
+		    return;
+		}
+	
+		User u = getUser(p);
+	
+		Location l = u.getLastLocation();
+	
+		if (l != null) {
+		    u.setLastLocation(null);
+		    p.teleport(l);
+		}
+		else {
+		    p.sendMessage(ChatColor.RED + "No last location saved for you.");
+		}
+	}
+
+	/**
+	 * @param sender
+	 * @param args
+	 */
+	private void cmdTPPos(CommandSender sender, String[] args) {
+		if (!(sender instanceof Player)) {
+		    sender.sendMessage("This cannot be run from the console!");
+		    return;
+		}
+	
+		if (args.length < 3 || args.length > 4) {
+		    sender.sendMessage("Invalid paramaters. Syntax: /tppos [world] x y z");
+		    return;
+		}
+	
+		Player p = (Player)sender;
+		World w = null;
+		if (args.length == 4) {
+		    w = getServer().getWorld(args[0]);
+		    args = new String[] { args[1], args[2], args[3] };
+		    if (w == null) {
+		        sender.sendMessage(ChatColor.RED + "An invalid world was provided.");
+		        return;
+		    }
+		}
+		else {
+		    w = p.getWorld();
+		}
+	
+		double x, y, z;
+	
+		try {
+		    x = Double.parseDouble(args[0]);
+		    y = Double.parseDouble(args[1]);
+		    z = Double.parseDouble(args[2]);
+		} catch (NumberFormatException ex) {
+		    sender.sendMessage("Invalid paramaters. Syntax: /tppos [world] x y z");
+		    return;
+		}
+	
+		p.teleport(new Location(w, x, y, z));
+	}
+
+	/**
+	 * @param sender
+	 * @param args
+	 * @return
+	 */
+	private boolean cmdTPHere(CommandSender sender, String[] args) {
+		if (!(sender instanceof Player)) {
+		    sender.sendMessage("This cannot be run from the console!");
+		    return true;
+		}
+	
+	
+		Player p2 = (Player)sender;
+	
+		if(!canTP(p2)) {
+		    messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+		    return true;
+		}
+	
+		if(args.length != 1) {
+		    messagePlayer(p2, "Usage: /tphere <player>", ChatColor.GOLD);
+		    return true;
+		}
+	
+		Player p1 = getPlayer(args[0]);
+		if(p1 == null) {
+		    messagePlayer(p2, "Couldn't find player "+ args[0], ChatColor.RED);
+		    return true;
+		}
+	
+		if(canTP(p2) && canOverride(p2, p1)) {
+		    messagePlayer(p1, p2.getName() + " teleported you to them.", ChatColor.GREEN);
+		    messagePlayer(p2, "Teleporting " + p1.getName() + " to you.", ChatColor.GREEN);
+		    teleport(p1, p2);
+		    return true;
+		} else {
+		    messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+		    return true;
+		}
+	}
+
+	/**
+	 * @param sender
+	 * @param args
+	 */
+	private void cmdTPMode(CommandSender sender, String[] args) {
+		if (!(sender instanceof Player)) {
+		    sender.sendMessage("This cannot be run from the console!");
+		    return;
+		}
+		Player p2 = (Player)sender;
+	
+		if(!canTP(p2)) {
+		    messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+		    return;
+		}
+	
+		User u2 = getUser(p2);
+	
+		if(args.length != 1 || (!args[0].equals("allow") &&
+		                        !args[0].equals("ask") &&
+		                        !args[0].equals("deny"))) {
+		    messagePlayer(p2, "Usage: /tpmode allow|ask|deny", ChatColor.GOLD);
+		    messagePlayer(p2, "You are currently in " + u2.getMode().toUpperCase() + " mode.", ChatColor.GOLD);
+		} else {
+		    u2.setMode(args[0]);
+		    messagePlayer(p2, "You are now in " + args[0].toUpperCase() + " mode.", ChatColor.GOLD);
+		}
+	}
+
+	/**
+	 * @param sender
+	 */
+	private void cmdTPAllow(CommandSender sender) {
+		if (!(sender instanceof Player)) {
+		    sender.sendMessage("This cannot be run from the console!");
+		    return;
+		}
+		Player p2 = (Player)sender;
+	
+		if(!canTP(p2)) {
+		    messagePlayer(p2, "You do not have permission." , ChatColor.RED);
+		    return;
+		}
+	
+		User u2 = getUser(p2);
+	
+		//Check the field exists...
+		if(u2.last_applicant == null) {
+		    messagePlayer(p2, "Error: No one has attempted to tp to you lately!", ChatColor.RED);
+		    return;
+		}
+	
+		//Check it hasn't expired
+		Date t = new Date();
+		if(t.getTime() > u2.last_applicant_time + 1000L*config.ASK_EXPIRE) {
+		    messagePlayer(p2, "Error: /tp request has expired!", ChatColor.RED);
+		    return;
+		}
+	
+	
+		Player p1 = getPlayer(u2.last_applicant);
+	
+		if(p1 == null) {
+		    messagePlayer(p2, "Error: "+u2.last_applicant+" is no longer online.");
+		    return;
+		}
+	
+		u2.last_applicant = null;
+		messagePlayer(p1, "Teleporting you to " + p2.getName() + ".", ChatColor.GREEN);
+		messagePlayer(p2, "Teleporting " + p1.getName() + " to you.", ChatColor.GREEN);
+		teleport(p1, p2);
+	}
+
+	/**
+	 * @param sender
+	 */
+	private void cmdTPDeny(CommandSender sender) {
+		if (!(sender instanceof Player)) {
+		    sender.sendMessage("This cannot be run from the console!");
+		    return;
+		}
+	
+		Player p2 = (Player)sender;
+	
+		if(!canTP(p2)) {
+		    messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+		    return;
+		}
+	
+		User u2 = getUser(p2);
+	
+		if(u2.last_applicant == null) {
+		    messagePlayer(p2, "Error: No one has attempted to tp to you lately!", ChatColor.RED);
+		    return;
+		}
+	
+	
+		messagePlayer(p2, "Denied a request from "+u2.last_applicant+".", ChatColor.RED);
+		messagePlayer(p2, "Use '/tpblock "+u2.last_applicant+"' to block further requests", ChatColor.RED);
+		u2.last_applicant = null;
+	}
+
+	/**
+	 * @param sender
+	 * @param args
+	 */
+	private void cmdTPFriend(CommandSender sender, String[] args) {
+		if (!(sender instanceof Player)) {
+		    sender.sendMessage("This cannot be run from the console!");
+		    return;
+		}
+		Player p2 = (Player)sender;
+	
+		if(!canTP(p2)) {
+		    messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+		    return;
+		}
+	
+		User u2 = getUser(p2);
+		if(args.length != 1) {
+		    messagePlayer(p2, "Usage: /tpfriend <player>", ChatColor.GOLD);
+		    return;
+		}
+		if(u2.addFriend(args[0])) {
+		    messagePlayer(p2, args[0] + " added as a friend.", ChatColor.GREEN);
+		} else {
+		    messagePlayer(p2, "Error: " + args[0] + " is already a friend.", ChatColor.GOLD);
+		}
+	}
+
+	/**
+	 * @param sender
+	 * @param args
+	 */
+	private void cmdTPUnfriend(CommandSender sender, String[] args) {
+		if (!(sender instanceof Player)) {
+		    sender.sendMessage("This cannot be run from the console!");
+		    return;
+		}
+	
+		Player p2 = (Player)sender;
+	
+		if(!canTP(p2)) {
+		    messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+		    return;
+		}
+	
+		User u2 = getUser(p2);
+		if(args.length != 1) {
+		    messagePlayer(p2, "Usage: /tpunfriend <player>", ChatColor.RED);
+		    return;
+		}
+		if(u2.delFriend(args[0])) {
+		    messagePlayer(p2, args[0] + " removed from friends.", ChatColor.GREEN);
+		} else {
+		    messagePlayer(p2, "Error: " + args[0] + " not on friends list.", ChatColor.GOLD);
+		}
+	}
+
+	/**
+	 * @param sender
+	 * @param args
+	 */
+	private void cmdBlock(CommandSender sender, String[] args) {
+		if (!(sender instanceof Player)) {
+		    sender.sendMessage("This cannot be run from the console!");
+		    return;
+		}
+		Player p2 = (Player)sender;
+	
+		if(!canTP(p2)) {
+		    messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+		    return;
+		}
+	
+		User u2 = getUser(p2);
+		if(args.length != 1) {
+		    messagePlayer(p2, "Usage: /tpblock <player>", ChatColor.GOLD);
+		    return;
+		}
+		if(u2.addBlocked(args[0])) {
+		    messagePlayer(p2, args[0] + " was blocked from teleporting to you.", ChatColor.GREEN);
+		} else {
+		    messagePlayer(p2, "Error: " + args[0] + " is already blocked.", ChatColor.GOLD);
+		}
+	}
+
+	/**
+	 * @param sender
+	 * @param args
+	 */
+	private void cmdUnblock(CommandSender sender, String[] args) {
+		if (!(sender instanceof Player)) {
+		    sender.sendMessage("This cannot be run from the console!");
+		    return;
+		}
+	
+		Player p2 = (Player)sender;
+	
+		if(!canTP(p2)) {
+		    messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+		    return;
+		}
+	
+		User u2 = getUser(p2);
+		if(args.length != 1) {
+		    messagePlayer(p2, "Usage: /tpunblock <player>", ChatColor.GOLD);
+		    return;
+		}
+		if(u2.delBlocked(args[0])) {
+		    messagePlayer(p2, args[0] + " was unblocked from teleporting to you.", ChatColor.GREEN);
+		} else {
+		    messagePlayer(p2, "Error: " + args[0] + " is not blocked.", ChatColor.GOLD);
+		}
+	}
 
 	/**
 	 * 
@@ -909,19 +626,19 @@ public class TPControl extends JavaPlugin implements Listener {
 		Player player = null;
 		if (sender instanceof Player)
 		    player = (Player)sender;
-
+	
 		StringBuilder sb = new StringBuilder();
 		int j = 0;
 		Iterator<Warp> i = this.config.WARPS.values().iterator();
 		while (i.hasNext()) {
 		    Warp warp = (Warp) i.next();
-
+	
 		    if (player == null || canWarp(player, warp)) {
 		        if (j % 2 == 0)
 		            sb.append(ChatColor.GRAY);
 		        else
 		            sb.append(ChatColor.WHITE);
-
+	
 		        sb.append(warp.getName()).append(", ");
 		        j++;
 		    }
@@ -929,11 +646,314 @@ public class TPControl extends JavaPlugin implements Listener {
 		String list = sb.toString();
 		if (list.length() >= 2)
 		    list = list.substring(0, list.length() - 2);
-
+	
 		sender.sendMessage(ChatColor.GOLD + "Warps: " + list);
 	}
 
-    //Pull a user from the cache, or create it if necessary
+	/**
+	 * @param sender
+	 * @param args
+	 */
+	private void cmdWarp(CommandSender sender, String[] args) {
+		if (!(sender instanceof Player)) {
+		    sender.sendMessage("This cannot be run from the console!");
+		    return;
+		}
+	
+		final Player p2 = (Player)sender;
+		
+		if(args.length == 0) {
+			cmdWarps(sender);
+			return;
+		}
+	
+		if(args.length != 1) {
+		    messagePlayer(p2, "Usage: /warp <warp>", ChatColor.GOLD);
+		    return;
+		}
+	
+		final Warp w1 = this.config.WARPS.get(args[0].toLowerCase());
+	
+		if(w1 == null) {
+		    messagePlayer(p2, "That warp does not exist.", ChatColor.RED);
+		    return;
+		}
+	
+		if(!canWarp(p2, w1)) {
+		    messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+		    return;
+		}
+	
+		if(economy != null) {
+		    boolean low_en = w1.getBalanceMin() != null;
+		    boolean low = low_en;
+		    if (low_en)
+		        low = economy.getBalance(p2) >= w1.getBalanceMin();
+	
+		    boolean high_en = w1.getBalanceMax() != null;
+		    boolean high = high_en;
+		    if (high_en)
+		        high = economy.getBalance(p2) <= w1.getBalanceMax();
+	
+		    if (low_en && low) {
+		        messagePlayer(p2, "Your balance is too low.", ChatColor.RED);
+		    }
+		    if (high_en && high) {
+		        messagePlayer(p2, "Your balance is too high.", ChatColor.RED);
+		    }
+	
+		    if (low_en && !low || high_en && !high) {
+		        return;
+		    }
+		}
+	
+		Date now = new Date();
+		Date p2cd = w1.getCooldown(p2);
+		if (p2cd != null && !now.after(new Date(p2cd.getTime() + w1.getCooldown() * 1000))) {
+		    messagePlayer(p2, "You must wait ", ChatColor.RED);
+		    return;
+		}
+	
+		if (w1.getWarmup() > 0) {
+		    Date p2wu = w1.getWarmup(p2);
+		    if (p2wu != null) {
+		        int elapsed = (int) ((now.getTime() - p2wu.getTime()) / 1000);
+		        int remaining = w1.getWarmup() - elapsed;
+		        messagePlayer(p2, "You have " + remaining + " second(s) of warmup remaining.", ChatColor.RED);
+	
+		        return;
+		    }
+		    else {
+		        messagePlayer(p2, "There is a " + w1.getWarmup() + " second warmup for this warp.", ChatColor.RED);
+		        if (w1.doesWarmupCancelOnMove()) {
+		            messagePlayer(p2, "You must not move during this time", ChatColor.RED);
+		        }
+	
+		        WarpTask warpTask = new WarpTask(this, w1, p2);
+		        this.warp_warmups.put(p2, warpTask);
+		        warpTask.runTaskLater(this, w1.getWarmup() * 20);
+	
+		        w1.setWarmup(p2, now);
+	
+		        return;
+		    }
+		}
+	
+		if (w1.allowBack) {
+		    User u = getUser(p2);
+		    u.setLastLocation(p2.getLocation());
+		}
+	
+		p2.teleport(w1.getLocation());
+	}
+
+	/**
+	 * @param sender
+	 * @param args
+	 */
+	private void cmdSetWarp(CommandSender sender, String[] args) {
+		if (!(sender instanceof Player)) {
+		    sender.sendMessage("This cannot be run from the console!");
+		    return;
+		}
+	
+		final Player p2 = (Player)sender;
+	
+		if(!p2.hasPermission("tpcontrol.setwarp")) {
+		    messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+		    return;
+		}
+	
+		if(args.length < 1) {
+		    messagePlayer(p2, "Usage: /setwarp <name> [option] [values...]", ChatColor.GOLD);
+		    return;
+		}
+	
+		Warp w1 = this.config.WARPS.get(args[0].toLowerCase());
+	
+		if (w1 == null) {
+		    w1 = new Warp(args[0], p2.getLocation());
+		    this.config.WARPS.put(args[0].toLowerCase(), w1);
+		}
+	
+		String option = "location";
+		if (args.length >= 2) {
+		    option = args[1];
+		}
+	
+		if (option.equalsIgnoreCase("location")) {
+		    w1.setLocation(p2.getLocation());
+		    messagePlayer(p2, "Set location for warp " + args[0], ChatColor.GOLD);
+		}
+		else if (option.equalsIgnoreCase("warmup")) {
+		    if (args.length != 3) {
+		        messagePlayer(p2, "Usage: /setwarp <name> warmup <number>", ChatColor.RED);
+		        return;
+		    }
+	
+		    int warmup = Integer.parseInt(args[2]);
+		    w1.setWarmup(warmup);
+		    messagePlayer(p2, "Set warmup for warp " + args[0], ChatColor.GOLD);
+		}
+		else if (option.equalsIgnoreCase("warmup-cancel-on-move")) {
+		    if (args.length != 3) {
+		        messagePlayer(p2, "Usage: /setwarp <name> warmup-cancel-on-move <true/false>", ChatColor.RED);
+		        return;
+		    }
+	
+		    boolean warmupCancelOnMove = Boolean.parseBoolean(args[2]);
+		    w1.setWarmupCancelOnMove(warmupCancelOnMove);
+		    messagePlayer(p2, "Set warmup cancel-on-move for warp " + args[0], ChatColor.GOLD);
+		}
+		else if (option.equalsIgnoreCase("warmup-cancel-on-damage")) {
+		    if (args.length != 3) {
+		        messagePlayer(p2, "Usage: /setwarp <name> warmup-cancel-on-damage <true/false>", ChatColor.RED);
+		        return;
+		    }
+	
+		    boolean warmupCancelOnDamage = Boolean.parseBoolean(args[2]);
+		    w1.setWarmupCancelOnDamage(warmupCancelOnDamage);
+		    messagePlayer(p2, "Set warmup cancel-on-damage for warp " + args[0], ChatColor.GOLD);
+		}
+		else if (option.equalsIgnoreCase("cooldown")) {
+		    if (args.length != 3) {
+		        messagePlayer(p2, "Usage: /setwarp <name> cooldown <number>", ChatColor.RED);
+		        return;
+		    }
+	
+		    int cooldown = Integer.parseInt(args[2]);
+		    w1.setCooldown(cooldown);
+		    messagePlayer(p2, "Set cooldown for warp " + args[0], ChatColor.GOLD);
+		}
+		else if (option.equalsIgnoreCase("balance-min")) {
+		    if (args.length != 3) {
+		        messagePlayer(p2, "Usage: /setwarp <name> balance-min <number>", ChatColor.RED);
+		        return;
+		    }
+	
+		    int balanceMin = Integer.parseInt(args[2]);
+		    w1.setBalanceMin(balanceMin);
+		    messagePlayer(p2, "Set min balance for warp " + args[0], ChatColor.GOLD);
+		}
+		else if (option.equalsIgnoreCase("balance-max")) {
+		    if (args.length != 3) {
+		        messagePlayer(p2, "Usage: /setwarp <name> balance-max <number>", ChatColor.RED);
+		        return;
+		    }
+	
+		    int balanceMax = Integer.parseInt(args[2]);
+		    w1.setBalanceMax(balanceMax);
+		    messagePlayer(p2, "Set max balance for warp " + args[0], ChatColor.GOLD);
+		}
+		else if (option.equalsIgnoreCase("allow-back")) {
+		    if (args.length != 3) {
+		        messagePlayer(p2, "Usage: /setwarp <name> allow-back <true/false>", ChatColor.RED);
+		        return;
+		    }
+	
+		    boolean allowBack = Boolean.parseBoolean(args[2]);
+		    w1.setAllowBack(allowBack);
+		    messagePlayer(p2, "Set allow-back for warp " + args[0], ChatColor.GOLD);
+		}
+		else if (option.equalsIgnoreCase("public")) {
+		    if (args.length != 3) {
+		        messagePlayer(p2, "Usage: /setwarp <name> public <true/false>", ChatColor.RED);
+		        return;
+		    }
+		    boolean pub = Boolean.parseBoolean(args[2]);
+		    w1.setPublic(pub);
+		    messagePlayer(p2, "Set public to " + pub + " for warp " + args[0], ChatColor.GOLD);
+		}
+		else if (option.equalsIgnoreCase("shortcuts")) {
+		    List<String> shortcuts = new ArrayList<String>();
+		    for (int i = 2; i < args.length; i++) {
+		        shortcuts.add(args[i]);
+		    }
+		    w1.setShortcuts(shortcuts);
+		    for (String shortcut : shortcuts) {
+		        ShortcutCommand shortcutCommand = new ShortcutCommand(shortcut, this, w1);
+		        registerCommand(new String[] { shortcut });
+		        getCommand(shortcut).setExecutor(shortcutCommand);
+		    }
+	
+		    messagePlayer(p2, "Set shortcuts for warp " + args[0], ChatColor.GOLD);
+		}
+	
+		getConfig().set("warps." + w1.getName() + ".location.world", w1.getLocation().getWorld().getName());
+		getConfig().set("warps." + w1.getName() + ".location.x", w1.getLocation().getX());
+		getConfig().set("warps." + w1.getName() + ".location.y", w1.getLocation().getY());
+		getConfig().set("warps." + w1.getName() + ".location.z", w1.getLocation().getZ());
+		getConfig().set("warps." + w1.getName() + ".location.yaw", w1.getLocation().getYaw());
+		getConfig().set("warps." + w1.getName() + ".location.pitch", w1.getLocation().getPitch());
+		getConfig().set("warps." + w1.getName() + ".warmup.length", w1.getWarmup());
+		getConfig().set("warps." + w1.getName() + ".warmup.cancel-on-move", w1.doesWarmupCancelOnMove());
+		getConfig().set("warps." + w1.getName() + ".warmup.cancel-on-damage", w1.doesWarmupCancelOnDamage());
+		getConfig().set("warps." + w1.getName() + ".cooldown.length", w1.getCooldown());
+		getConfig().set("warps." + w1.getName() + ".economy.balance.min", w1.getBalanceMin());
+		getConfig().set("warps." + w1.getName() + ".economy.balance.max", w1.getBalanceMax());
+		getConfig().set("warps." + w1.getName() + ".shortcuts", w1.getShortcuts());
+		getConfig().set("warps." + w1.getName() + ".allow-back", w1.doesAllowBack());
+		saveConfig();
+	}
+
+	/**
+	 * @param sender
+	 * @param args
+	 */
+	private void cmdDelWarp(CommandSender sender, String[] args) {
+		if(!sender.hasPermission("tpcontrol.delwarp")) {
+		    sender.sendMessage(ChatColor.RED + "You do not have permission.");
+		    return;
+		}
+	
+		if(args.length != 1) {
+		    sender.sendMessage(ChatColor.RED + "Usage: /delwarp <name>");
+		    return;
+		}
+	
+		Warp w1 = this.config.WARPS.get(args[0].toLowerCase());
+	
+		if(w1 != null) {
+		    this.config.WARPS.remove(args[0].toLowerCase());
+		    sender.sendMessage(ChatColor.RED + "Removed warp " + args[0]);
+		}
+		else {
+		    sender.sendMessage(ChatColor.RED + "Warp does not exist.");
+		}
+	
+		getConfig().set("warps." + args[0], null);
+		saveConfig();
+	}
+
+	/**
+	 * @param sender
+	 */
+	private void cmdCancelWarp(CommandSender sender) {
+		if (!(sender instanceof Player)) {
+		    sender.sendMessage("This cannot be run from the console!");
+		    return;
+		}
+	
+		final Player p2 = (Player)sender;
+	
+		if(!p2.hasPermission("tpcontrol.cancelwarp")) {
+		    messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+		    return;
+		}
+	
+		if (warp_warmups.containsKey(p2)) {
+		    messagePlayer(p2, "Cancelling warp.", ChatColor.RED);
+		    WarpTask wt1 = warp_warmups.get(p2);
+		    wt1.cancel();
+		    warp_warmups.remove(p2);
+	
+		    return;
+		}
+	
+		messagePlayer(p2, "You have no warp to cancel.", ChatColor.RED);
+	}
+
+	//Pull a user from the cache, or create it if necessary
     public User getUser(Player p) {
         User u = user_cache.get(p.getName().toLowerCase());
         if(u == null) {
