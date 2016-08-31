@@ -90,6 +90,9 @@ public class TPControl extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable(){
+        for(User u : user_cache.values()) {
+            u.save();
+        }
         log.info("TPControl has been disabled.");
     }
 

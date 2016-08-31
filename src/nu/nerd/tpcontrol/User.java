@@ -67,7 +67,6 @@ public class User {
         yaml.set("last_location", last);
         this.lastLocation = last;
         dirty = true;
-        this.save();
     }
 
     public Location getLastLocation() {
