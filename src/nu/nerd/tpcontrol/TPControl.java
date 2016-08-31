@@ -36,6 +36,13 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
+import com.sk89q.worldguard.protection.ApplicableRegionSet;
+import com.sk89q.worldguard.protection.managers.RegionManager;
+import com.wimbli.WorldBorder.BorderData;
+import com.wimbli.WorldBorder.WorldBorder;
+
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.RegisteredServiceProvider;
@@ -51,6 +58,8 @@ public class TPControl extends JavaPlugin implements Listener {
     public HashMap<Player, WarpTask> warp_warmups = new HashMap<Player, WarpTask>();
 
     public Economy economy = null;
+    private WorldBorder worldBorder = null;
+    private WorldGuardPlugin worldGuard = null;
 
     @Override
     public void onEnable(){
@@ -63,6 +72,14 @@ public class TPControl extends JavaPlugin implements Listener {
                 this.economy = economyProvider.getProvider();
             }
         }
+
+        Plugin plugin = getServer().getPluginManager().getPlugin("WorldBorder");
+        if (plugin != null && plugin instanceof WorldBorder)
+        	worldBorder = (WorldBorder)plugin;
+        
+        plugin = getServer().getPluginManager().getPlugin("WorldGuard");
+        if (plugin != null && plugin instanceof WorldGuardPlugin)
+        	worldGuard = (WorldGuardPlugin)plugin;
 
         //Listen to events
         PluginManager pm = getServer().getPluginManager();
@@ -225,6 +242,7 @@ public class TPControl extends JavaPlugin implements Listener {
 		case "setwarp": cmdSetWarp(sender, args); return true;
 		case "delwarp": cmdDelWarp(sender, args); return true;
 		case "cancelwarp": cmdCancelWarp(sender); return true;
+		case "randloc": cmdRandLoc(sender, args); return true;
 		default: return false;
     	}
     }
@@ -954,6 +972,70 @@ public class TPControl extends JavaPlugin implements Listener {
 		}
 	
 		messagePlayer(p2, "You have no warp to cancel.", ChatColor.RED);
+	}
+	
+	/**
+	 * Warp to a random location
+	 * @param sender
+	 * @param args
+	 */
+	private void cmdRandLoc(CommandSender sender, String[] args) {
+		// Check perms
+		if (!(sender instanceof Player)) {
+			sender.sendMessage("Etherial beings cannot be teleported. Sorry :(");
+			return;
+		}
+		
+		if (!sender.hasPermission("tpcontrol.randloc")) {
+			sender.sendMessage(ChatColor.RED + "You do not have permission to use /randloc");
+			return;
+		}
+		
+		// Figure out the world size and setup
+		Player p = (Player)sender;
+		RegionManager regionManager = null;
+		BorderData borderData = null;
+		
+		if (worldGuard != null)
+			regionManager = worldGuard.getRegionManager(p.getWorld());
+
+		if (worldBorder != null)
+			borderData = worldBorder.getWorldBorder(p.getWorld().getName());
+
+		// Figure out the world shape
+		if (borderData == null) {
+			p.sendMessage(ChatColor.RED + "ERROR: Cannot get world size from WorldBorder plugin");
+			return;
+		}
+		
+		// Pick random locations until we find a good one
+		for(int i = 0; i < 100; i++) {
+			double x = (2.0*Math.random() - 1.0) * borderData.getRadiusX() + borderData.getX();
+			double z = (2.0*Math.random() - 1.0) * borderData.getRadiusZ() + borderData.getZ();
+
+			// Reject all points outside the border. We need this because circular
+			// borders are smaller than our random location.
+			if(!borderData.insideBorder(x, z))
+				continue;
+
+			// Calculate y offset
+			double y = (double)p.getWorld().getHighestBlockYAt((int)x, (int)z) + 0.1;
+			Location dest = new Location(p.getWorld(), x, y, z);
+
+			// If we have a region manager, ensure our location is not inside a region
+			if(regionManager != null) {
+				ApplicableRegionSet set = regionManager.getApplicableRegions(dest);
+				if (set.size() > 0) {
+					continue; // Find another random location
+				}
+			}
+			// Wrap it up
+			p.teleport(dest);
+			return;
+		}
+		
+		p.sendMessage("Could not find a free spot. Try again later");
+		return;
 	}
 
 	//Pull a user from the cache, or create it if necessary

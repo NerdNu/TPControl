@@ -2,9 +2,9 @@ name: TPControl
 version: ${project.version}
 description: ${project.description}
 website: ${project.url}
-author: [Barney Gale, Deaygo, c45y, slide]
+author: [Barney Gale, Deaygo, c45y, slide, Challenger2]
 main: nu.nerd.tpcontrol.TPControl
-softdepend: [Vault]
+softdepend: [Vault, WorldBorder, WorldGuard]
 permissions:
     tpcontrol.level.*:
         description: Teleport user class.
@@ -20,6 +20,8 @@ permissions:
         description: Allows a player to delete a warp
     tpcontrol.admin:
         description: Allows use of /tpcontrol
+    tpcontrol.randloc:
+        description: Allows use of /randloc
 description: 
     Simple, configurable, tiered teleport plugin with allow/ask/deny modes.
 commands:
@@ -92,4 +94,8 @@ commands:
         description: Cancel a warp warmup
         usage: |
             /cancelwarp
-
+    randloc:
+        description: Teleport to a random location
+        permission: tpcontrol.randloc
+        usage: |
+            /randloc
