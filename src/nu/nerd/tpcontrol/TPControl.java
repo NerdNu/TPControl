@@ -609,7 +609,7 @@ public class TPControl extends JavaPlugin implements Listener {
 		User u2 = getUser(p2);
 
 		if(args.length == 0) {
-			PrettyPrintUUIDList(sender, "Blocked: ", u2.getFriends());
+			PrettyPrintUUIDList(sender, "Blocked: ", u2.getBlocked());
 		} else if (args.length == 1) {
 			if(u2.addBlocked(args[0])) {
 			    messagePlayer(p2, args[0] + " was blocked from teleporting to you.", ChatColor.GREEN);
@@ -642,7 +642,7 @@ public class TPControl extends JavaPlugin implements Listener {
 		User u2 = getUser(p2);
 		
 		if(args.length == 0) {
-			PrettyPrintUUIDList(sender, "Blocked: ", u2.getFriends());
+			PrettyPrintUUIDList(sender, "Blocked: ", u2.getBlocked());
 		} else if (args.length == 1) {
 			if(u2.delBlocked(args[0])) {
 			    messagePlayer(p2, args[0] + " was unblocked from teleporting to you.", ChatColor.GREEN);
