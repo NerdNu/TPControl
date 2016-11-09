@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -109,14 +110,20 @@ public class User {
         List<String> l = getList(name);
 
         String uuid = null;
-        Player perp = plugin.getPlayer(username);
-        if (perp != null)
-            uuid = perp.getUniqueId().toString();
-        else
-            uuid = Bukkit.getOfflinePlayer(username).getUniqueId().toString();
 
-        if(!l.contains(uuid)) {
-            return false;
+        // 'username' could be a UUID
+        if (l.contains(username)) {
+        	uuid = username;
+        } else {
+	        Player perp = plugin.getPlayer(username);
+	        if (perp != null)
+	            uuid = perp.getUniqueId().toString();
+	        else
+	            uuid = Bukkit.getOfflinePlayer(username).getUniqueId().toString();
+	        
+	        if(!l.contains(uuid)) {
+	            return false;
+	        }
         }
 
         l.remove(uuid);

@@ -9,6 +9,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -18,6 +19,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
@@ -540,14 +542,19 @@ public class TPControl extends JavaPlugin implements Listener {
 		}
 	
 		User u2 = getUser(p2);
-		if(args.length != 1) {
-		    messagePlayer(p2, "Usage: /tpfriend <player>", ChatColor.GOLD);
-		    return;
-		}
-		if(u2.addFriend(args[0])) {
-		    messagePlayer(p2, args[0] + " added as a friend.", ChatColor.GREEN);
+
+		if(args.length == 0) {
+			PrettyPrintUUIDList(sender, "Friends", u2.getFriends());
+		} else if (args.length == 1) {
+			// Add a new friend
+			if(u2.addFriend(args[0])) {
+			    messagePlayer(p2, args[0] + " added as a friend.", ChatColor.GREEN);
+			} else {
+			    messagePlayer(p2, "Error: " + args[0] + " is already a friend.", ChatColor.GOLD);
+			}
 		} else {
-		    messagePlayer(p2, "Error: " + args[0] + " is already a friend.", ChatColor.GOLD);
+			// Invalid arguments
+			messagePlayer(p2, "Usage: /tpfriend [<player>]", ChatColor.GOLD);
 		}
 	}
 
@@ -569,14 +576,17 @@ public class TPControl extends JavaPlugin implements Listener {
 		}
 	
 		User u2 = getUser(p2);
-		if(args.length != 1) {
-		    messagePlayer(p2, "Usage: /tpunfriend <player>", ChatColor.RED);
-		    return;
-		}
-		if(u2.delFriend(args[0])) {
-		    messagePlayer(p2, args[0] + " removed from friends.", ChatColor.GREEN);
+
+		if(args.length == 0) {
+			PrettyPrintUUIDList(sender, "Friends", u2.getFriends());
+		} else if(args.length == 1) {
+			if(u2.delFriend(args[0])) {
+			    messagePlayer(p2, args[0] + " removed from friends.", ChatColor.GREEN);
+			} else {
+			    messagePlayer(p2, "Error: " + args[0] + " not on friends list.", ChatColor.GOLD);
+			}
 		} else {
-		    messagePlayer(p2, "Error: " + args[0] + " not on friends list.", ChatColor.GOLD);
+		    messagePlayer(p2, "Usage: /tpunfriend [<player>]", ChatColor.RED);
 		}
 	}
 
@@ -597,15 +607,19 @@ public class TPControl extends JavaPlugin implements Listener {
 		}
 	
 		User u2 = getUser(p2);
-		if(args.length != 1) {
-		    messagePlayer(p2, "Usage: /tpblock <player>", ChatColor.GOLD);
-		    return;
-		}
-		if(u2.addBlocked(args[0])) {
-		    messagePlayer(p2, args[0] + " was blocked from teleporting to you.", ChatColor.GREEN);
+
+		if(args.length == 0) {
+			PrettyPrintUUIDList(sender, "Blocked: ", u2.getFriends());
+		} else if (args.length == 1) {
+			if(u2.addBlocked(args[0])) {
+			    messagePlayer(p2, args[0] + " was blocked from teleporting to you.", ChatColor.GREEN);
+			} else {
+			    messagePlayer(p2, "Error: " + args[0] + " is already blocked.", ChatColor.GOLD);
+			}
 		} else {
-		    messagePlayer(p2, "Error: " + args[0] + " is already blocked.", ChatColor.GOLD);
+		    messagePlayer(p2, "Usage: /tpblock [<player>]", ChatColor.GOLD);
 		}
+
 	}
 
 	/**
@@ -626,15 +640,19 @@ public class TPControl extends JavaPlugin implements Listener {
 		}
 	
 		User u2 = getUser(p2);
-		if(args.length != 1) {
-		    messagePlayer(p2, "Usage: /tpunblock <player>", ChatColor.GOLD);
-		    return;
-		}
-		if(u2.delBlocked(args[0])) {
-		    messagePlayer(p2, args[0] + " was unblocked from teleporting to you.", ChatColor.GREEN);
+		
+		if(args.length == 0) {
+			PrettyPrintUUIDList(sender, "Blocked: ", u2.getFriends());
+		} else if (args.length == 1) {
+			if(u2.delBlocked(args[0])) {
+			    messagePlayer(p2, args[0] + " was unblocked from teleporting to you.", ChatColor.GREEN);
+			} else {
+			    messagePlayer(p2, "Error: " + args[0] + " is not blocked.", ChatColor.GOLD);
+			}
 		} else {
-		    messagePlayer(p2, "Error: " + args[0] + " is not blocked.", ChatColor.GOLD);
+		    messagePlayer(p2, "Usage: /tpunblock [<player>]", ChatColor.GOLD);
 		}
+
 	}
 
 	/**
@@ -1142,5 +1160,41 @@ public class TPControl extends JavaPlugin implements Listener {
             getLogger().log(Level.WARNING, "exception getting command map", ex);
         }
         return commandMap;
+    }
+    
+    /**
+     * Print a pretty list with a gold title and alternating colored list items
+     * 
+     * @param sender Command Sender to print the list to
+     * @param title Title of the list
+     * @param list List to print
+     */
+    public static void PrettyPrintUUIDList(CommandSender sender, String title, List<String> list) {
+
+		StringBuilder sb = new StringBuilder();
+		sb.append(ChatColor.GOLD);
+		sb.append(title);
+		sb.append(": ");
+
+		int i = 0;
+		for(String s : list) {
+	        if (i % 2 == 0)
+	            sb.append(ChatColor.GRAY);
+	        else
+	            sb.append(ChatColor.WHITE);
+
+	        OfflinePlayer p = Bukkit.getOfflinePlayer(UUID.fromString(s));
+	        if(p.getName() != null) {
+	        	sb.append(p.getName());
+	        } else {
+	        	sb.append(s);
+	        }
+
+	        if (i < list.size() - 1)
+	        	sb.append(", ");
+
+	        i++;
+		}
+		sender.sendMessage(sb.toString());
     }
 }
