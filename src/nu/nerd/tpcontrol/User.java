@@ -4,7 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Date;
 import java.util.List;
-import java.util.UUID;
+import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -25,6 +25,13 @@ public class User {
     private YamlConfiguration yaml;
     private boolean dirty = false;
     private Location lastLocation;
+    
+    /** Valid characters for homes */
+    private static Pattern validChars = Pattern.compile("^[A-Za-z_]+[A-Za-z_0-9]*");
+    
+    private final String HOMES = "homes.";
+    private final String LOCATION = ".location";
+    private final String VISIBILITY = ".visibility";
 
     public User (TPControl instance, Player p) {
         //player = instance.getServer().getPlayer(u);
@@ -199,5 +206,54 @@ public class User {
         Player player = plugin.getPlayer(this.username);
         if (player != null)
             plugin.messagePlayer(player, applicant.getName() + " wants to teleport to you. Please use /tpallow or /tpdeny.");
+    }
+    
+    /**
+     * Set a users home.
+     * 
+     * @param name
+     * @param loc
+     */
+    public void setHome(String name, Location loc) {
+        if(!validChars.matcher(name).matches()) {
+            throw new FormattedUserException(ChatColor.RED + "ERROR: Invalid home name");
+        }
+        
+        // Set the location
+        yaml.set(HOMES + name + LOCATION, loc);
+        dirty = true;
+        
+    }
+    
+    /**
+     * Set a users home and visibility setting.
+     * 
+     * @param home
+     * @param loc
+     * @param visibility
+     */
+    public void setHome(String name, Location loc, HomeVisibility visibility) {
+        // Let setHome do the args checking thing. Unchecked exceptions are nice :)
+        setHome(name, loc);
+        yaml.set(HOMES + name + VISIBILITY, visibility.toString());
+    }
+    
+    /**
+     * Get the location of a home from this player.
+     * 
+     * @param name
+     * @return
+     */
+    public Location getHome(String name) {
+        Object o = yaml.get(HOMES + name + LOCATION);
+        if(o == null || !(o instanceof Location)) {
+            throw new FormattedUserException(ChatColor.RED + "Home not found");
+        }
+        return (Location)o;
+    }
+    
+    public HomeVisibility getHomeVisibility(String name) {
+        String vis = yaml.getString(HOMES + name + VISIBILITY, HomeVisibility.UNLISTED.toString());
+        return HomeVisibility.valueOf(vis);
     }
 }
