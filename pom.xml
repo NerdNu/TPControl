@@ -24,9 +24,9 @@
             <version>1.6</version>
         </dependency>
         <dependency>
-        	<groupId>com.wimbli.WorldBorder</groupId>
-        	<artifactId>WorldBorder</artifactId>
-        	<version>1.8.6</version>
+            <groupId>com.wimbli.WorldBorder</groupId>
+            <artifactId>WorldBorder</artifactId>
+            <version>1.8.7</version>
         </dependency>
         <dependency>
             <groupId>com.sk89q.worldguard</groupId>
@@ -41,8 +41,8 @@
             <url>https://hub.spigotmc.org/nexus/content/groups/public/</url>
         </repository>
         <repository>
-	        <id>vault-repo</id>
-	        <url>http://nexus.hc.to/content/repositories/pub_releases</url>
+            <id>vault-repo</id>
+            <url>http://nexus.hc.to/content/repositories/pub_releases</url>
         </repository>
         <repository>
             <id>sk89q</id>
