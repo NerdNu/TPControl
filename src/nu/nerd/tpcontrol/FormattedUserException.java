@@ -3,7 +3,7 @@ package nu.nerd.tpcontrol;
 import org.bukkit.command.CommandSender;
 
 /**
- * Create a special exception to get bail out of commands and get messages back to the
+ * Create a special exception to bail out of commands and get messages back to the
  * users without having to use C style programming. (Sticking it to Checked exceptions)
  * 
  */
