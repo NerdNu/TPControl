@@ -22,6 +22,15 @@ permissions:
         description: Allows use of /tpcontrol
     tpcontrol.randloc:
         description: Allows use of /randloc
+    tpcontrol.home:
+        description: Allows use of /home, /sethome, /delhome, and /listhomes.
+        default: op
+    tpcontrol.homeadmin:
+        description: Allows admin functions to be used on the /home suite
+        default: op
+        children:
+            tpcontrol.home: true
+
 description: 
     Simple, configurable, tiered teleport plugin with allow/ask/deny modes.
 commands:
@@ -99,3 +108,25 @@ commands:
         permission: tpcontrol.randloc
         usage: |
             /randloc
+    home:
+        description: Teleport to a saved location
+        permission: tpcontrol.home
+        usage: |
+            /<command> [[<player>] <name>]
+    sethome:
+        description: Save a named location
+        permission: tpcontrol.home
+        usage: |
+             /<command> [<name>] [{public | unlisted | private}]
+    listhomes:
+        description: List saved locations
+        aliases: [lshomes]
+        permission: tpcontrol.home
+        usage: |
+            /<command> [<player>]
+    delhome:
+        description: Delete a saved location
+        aliases: [rmhome]
+        permission: tpcontrol.home
+        usage: |
+            /<command> [<player>] <home>

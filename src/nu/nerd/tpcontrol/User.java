@@ -3,12 +3,17 @@ package nu.nerd.tpcontrol;
 import java.io.File;
 import java.io.IOException;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
@@ -16,6 +21,7 @@ public class User {
     private TPControl plugin;
 
     public String username;
+    public UUID uuid;
 
     //Ask-mode stuff
     String last_applicant;
@@ -30,19 +36,28 @@ public class User {
     private static Pattern validChars = Pattern.compile("^[A-Za-z_]+[A-Za-z_0-9]*");
     
     private final String HOMES = "homes.";
+    private final String HOMES_NO_DOT = "homes";
     private final String LOCATION = ".location";
     private final String VISIBILITY = ".visibility";
 
     public User (TPControl instance, Player p) {
-        //player = instance.getServer().getPlayer(u);
+        Init(instance, p.getName(), p.getUniqueId());
+    }
+    
+    public User (TPControl instance, OfflinePlayer p) {
+        Init(instance, p.getName(), p.getUniqueId());
+    }
+    
+    private void Init(TPControl instance, String name, UUID uuid) {
         plugin = instance;
-        username = p.getName();
+        username = name;
+        this.uuid = uuid;
 
         prefs_path = new File(plugin.getDataFolder(), "users");
         if(!prefs_path.exists()) {
             prefs_path.mkdir();
         }
-        prefs_path = new File(prefs_path, p.getUniqueId().toString() + ".yml");
+        prefs_path = new File(prefs_path, uuid.toString() + ".yml");
 
         yaml = YamlConfiguration.loadConfiguration(prefs_path);
         yaml.addDefault("mode", plugin.config.DEFAULT_MODE);
@@ -213,31 +228,22 @@ public class User {
      * 
      * @param name
      * @param loc
+     * @param visibility
      */
-    public void setHome(String name, Location loc) {
+    public void setHome(String name, Location loc, HomeVisibility visibility) {
         if(!validChars.matcher(name).matches()) {
             throw new FormattedUserException(ChatColor.RED + "ERROR: Invalid home name");
         }
         
         // Set the location
         yaml.set(HOMES + name + LOCATION, loc);
+        if(visibility != null) {
+            yaml.set(HOMES + name + VISIBILITY, visibility.toString());
+        }
         dirty = true;
         
     }
-    
-    /**
-     * Set a users home and visibility setting.
-     * 
-     * @param home
-     * @param loc
-     * @param visibility
-     */
-    public void setHome(String name, Location loc, HomeVisibility visibility) {
-        // Let setHome do the args checking thing. Unchecked exceptions are nice :)
-        setHome(name, loc);
-        yaml.set(HOMES + name + VISIBILITY, visibility.toString());
-    }
-    
+
     /**
      * Get the location of a home from this player.
      * 
@@ -247,13 +253,45 @@ public class User {
     public Location getHome(String name) {
         Object o = yaml.get(HOMES + name + LOCATION);
         if(o == null || !(o instanceof Location)) {
-            throw new FormattedUserException(ChatColor.RED + "Home not found");
+            throw new FormattedUserException(ChatColor.RED + "Home " + name + " not found.");
         }
         return (Location)o;
     }
     
+    /**
+     * Get the visibility of a given home
+     * 
+     * @param name
+     * @return
+     */
     public HomeVisibility getHomeVisibility(String name) {
         String vis = yaml.getString(HOMES + name + VISIBILITY, HomeVisibility.UNLISTED.toString());
         return HomeVisibility.valueOf(vis);
     }
+    
+    /**
+     * Delete a home location
+     * @param name
+     */
+    public void deleteHome(String name) {
+        // Call getHome to see if the home exists. It will throw exceptions
+        // if there is not home.
+        getHome(name);
+        yaml.set(HOMES + name, null);
+    }
+    
+    /**
+     * Get a set of names of all the homes.
+     * 
+     * @return The homes.
+     */
+    public Set<String> getHomeNames() {
+        ConfigurationSection s = yaml.getConfigurationSection(HOMES_NO_DOT);
+        if (s == null) {
+            return new HashSet<String>();
+        } else {
+            return s.getKeys(false);
+        }
+    }
 }
+

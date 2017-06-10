@@ -225,28 +225,38 @@ public class TPControl extends JavaPlugin implements Listener {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String name, String[] args) {
+        
+        try{
+        	switch (command.getName().toLowerCase()) {
+    		case "tpcontrol": cmdTPControl(sender, args); return true;
+    		case "tp": cmdTP(sender, args); return true;
+    		case "back": cmdBack(sender); return true;
+    		case "tppos": cmdTPPos(sender, args); return true;
+    		case "tphere": cmdTPHere(sender, args); return true;
+    		case "tpmode": cmdTPMode(sender, args); return true;
+    		case "tpallow": cmdTPAllow(sender); return true;
+    		case "tpdeny": cmdTPDeny(sender); return true;
+    		case "tpfriend": cmdTPFriend(sender, args); return true;
+    		case "tpunfriend": cmdTPUnfriend(sender, args); return true;
+    		case "tpblock": cmdBlock(sender, args); return true;
+    		case "tpunblock": cmdUnblock(sender, args); return true;
+    		case "warps": cmdWarps(sender); return true;
+    		case "warp": cmdWarp(sender, args); return true;
+    		case "setwarp": cmdSetWarp(sender, args); return true;
+    		case "delwarp": cmdDelWarp(sender, args); return true;
+    		case "cancelwarp": cmdCancelWarp(sender); return true;
+    		case "randloc": cmdRandLoc(sender, args); return true;
+            case "home": cmdHome(sender, args); return true;
+    		case "sethome": cmdSetHome(sender, args); return true;
+    		case "delhome": cmdDelHome(sender, args); return true;
+    		case "listhomes": cmdListHomes(sender, args); return true;
+    		default: return false;
+        	}
+        } catch (FormattedUserException e) {
+            e.print(sender);
+            return true;
+        }
 
-    	switch (command.getName().toLowerCase()) {
-		case "tpcontrol": cmdTPControl(sender, args); return true;
-		case "tp": cmdTP(sender, args); return true;
-		case "back": cmdBack(sender); return true;
-		case "tppos": cmdTPPos(sender, args); return true;
-		case "tphere": cmdTPHere(sender, args); return true;
-		case "tpmode": cmdTPMode(sender, args); return true;
-		case "tpallow": cmdTPAllow(sender); return true;
-		case "tpdeny": cmdTPDeny(sender); return true;
-		case "tpfriend": cmdTPFriend(sender, args); return true;
-		case "tpunfriend": cmdTPUnfriend(sender, args); return true;
-		case "tpblock": cmdBlock(sender, args); return true;
-		case "tpunblock": cmdUnblock(sender, args); return true;
-		case "warps": cmdWarps(sender); return true;
-		case "warp": cmdWarp(sender, args); return true;
-		case "setwarp": cmdSetWarp(sender, args); return true;
-		case "delwarp": cmdDelWarp(sender, args); return true;
-		case "cancelwarp": cmdCancelWarp(sender); return true;
-		case "randloc": cmdRandLoc(sender, args); return true;
-		default: return false;
-    	}
     }
 
 	/**
@@ -1055,9 +1065,185 @@ public class TPControl extends JavaPlugin implements Listener {
 		p.sendMessage("Could not find a free spot. Try again later");
 		return;
 	}
+	
+	/**
+	 * Go home
+	 * 
+	 * @param sender
+	 * @param args
+	 */
+	public void cmdHome(CommandSender sender, String[] args) {
+	    Player p = castPlayer(sender);
+	    String homeName = null; // home to teleport to
+	    User user = null; // User to get the home from.
+	    
+	    // Parse arguments
+	    if(args.length == 0) {
+	        // Go straight home
+	        homeName = "default";
+	        user = getUser(p);
+	    } else if (args.length == 1) {
+	        // Go to named home.
+	        homeName = args[0];
+	        user = getUser(p);
+	    } else if (args.length == 2) {
+	        // Go to the named home of another player.
+	        homeName = args[1];
+	        OfflinePlayer p2 = this.getServer().getOfflinePlayer(args[0]);
+	        if (p2 == null) {
+	            throw new FormattedUserException(ChatColor.RED + "Cannot find player " + args[0] + ".");
+	        }
+	        user = getUser(p2);
+	        
+	        // Check for private homes.
+	        if(!p.hasPermission("tpcontrol.homeadmin")) {
+    	        if (user.getHomeVisibility(homeName) == HomeVisibility.PRIVATE) {
+    	            throw new FormattedUserException(ChatColor.RED + "Home " + homeName + " not found.");
+    	        }
+	        }
+	        
+	    } else if (args.length >= 3) {
+	        throw new FormattedUserException(ChatColor.RED +
+	                "USAGE: /home\n" +
+	                "USAGE: /home <name>\n" +
+	                "USAGE: /home <player> <name>\n");
+	    }
+
+	    // Teleport to the saved location.
+	    Location loc = user.getHome(homeName);
+	    p.teleport(loc);
+	    
+	}
+	
+	/**
+	 * Set a home position at a player's present location.
+	 * 
+	 * @param sender
+	 * @param args
+	 */
+	public void cmdSetHome(CommandSender sender, String[] args) {
+        Player p = castPlayer(sender);
+        
+        String homeName = "default";
+        HomeVisibility visibility = null;
+        
+        if(args.length >= 1) {
+            homeName = args[0];
+        }
+        if(args.length >= 2) {
+            try{
+            visibility = HomeVisibility.valueOf(args[1].toUpperCase());
+            } catch (Exception e) {
+                throw new FormattedUserException("USAGE: /sethome [<name>] [{public | unlisted | private}]");
+            }
+        }
+        
+        User u = getUser(p);
+        u.setHome(homeName, p.getLocation(), visibility);
+        p.sendMessage(ChatColor.GRAY + "Home set.");
+	}
+	
+	/**
+	 * Delete a home
+	 * 
+	 * @param sender
+	 * @param args
+	 */
+    public void cmdDelHome(CommandSender sender, String[] args) {
+	    Player p = castPlayer(sender);
+
+	    // Delete your own home
+	    if(args.length == 1) {
+	        String homeName = args[0];
+	        getUser(p).deleteHome(homeName);
+	        p.sendMessage(ChatColor.GRAY + "Home " + homeName + " cleared.");
+
+	    // Delete another's home
+	    } else if(args.length == 2) {
+	        if(!p.hasPermission("tpcontrol.homeadmin")) {
+	            throw new FormattedUserException(ChatColor.RED + "Usage: /delhome <name>");
+	        }
+	        String playerName = args[0];
+	        String homeName = args[1];
+	        OfflinePlayer p2 = this.getServer().getOfflinePlayer(playerName);
+	        if (p2 == null) {
+	            throw new FormattedUserException(ChatColor.RED + "Cannot find player " + playerName + ".");
+	        }
+	        // Delete the home.
+	        getUser(p2).deleteHome(homeName);
+	        p.sendMessage(ChatColor.GRAY + "Home " + homeName + " cleared.");
+
+	    // Invalid arguments
+	    } else {
+	        if(p.hasPermission("tpcontrol.homeadmin")) {
+	            p.sendMessage(ChatColor.RED + "Usage: /delhome [player] <name>");
+	        } else {
+	            p.sendMessage(ChatColor.RED + "Usage: /delhome <name>");
+	        }
+	    }
+	}
+	
+	/**
+	 * List a player's homes
+	 * @param sender
+	 * @param args optional player name
+	 */
+	public void cmdListHomes(CommandSender sender, String[] args) {
+	    Player p = castPlayer(sender);
+	    OfflinePlayer p2 = null;
+	    boolean show_unlisted = false; // show unlisted and private homes
+	    String player_desc = null;
+
+	    if (args.length == 0) {
+	        p2 = p; // List your own homes.
+	        show_unlisted = true;
+	        player_desc = "Your";
+	    }
+	    if (args.length == 1) {
+	        p2 = this.getServer().getOfflinePlayer(args[0]);
+	        show_unlisted = p.hasPermission("tpcontrol.homeadmin");
+	        player_desc = p2.getName();
+	    }
+	    
+	    User u = getUser(p2);
+	    p.sendMessage(ChatColor.GRAY + player_desc + " homes:");
+	    for(String homeName : u.getHomeNames()) {
+	        HomeVisibility vis = u.getHomeVisibility(homeName);
+	        if (vis == HomeVisibility.PUBLIC || show_unlisted) {
+	            p.sendMessage(ChatColor.GRAY + homeName + " : " + vis.toString());
+	        }
+	    }
+	    
+	}
+
+	/**
+	 * Cast a command sender to a player. If not, throw a
+	 * FormattedUserException explaining that only players are allowed.
+	 * 
+	 * @param sender
+	 * @return A player
+	 */
+	public Player castPlayer(CommandSender sender) {
+	    if (sender instanceof Player) {
+	        return (Player)sender;
+	    } else {
+	        throw new FormattedUserException("Silly console, trix are for kids.");
+	    }
+	}
+	
 
 	//Pull a user from the cache, or create it if necessary
     public User getUser(Player p) {
+        User u = user_cache.get(p.getName().toLowerCase());
+        if(u == null) {
+            u = new User(this, p);
+            user_cache.put(p.getName().toLowerCase(), u);
+        }
+        return u;
+    }
+    
+    //Pull a user from the cache, or create it if necessary
+    public User getUser(OfflinePlayer p) {
         User u = user_cache.get(p.getName().toLowerCase());
         if(u == null) {
             u = new User(this, p);
