@@ -39,7 +39,7 @@ public class User {
     private final String LOCATION = ".location";
     private final String VISIBILITY = ".visibility";
 
-    public User (TPControl instance, Player p) {
+    public User(TPControl instance, Player p) {
         this(instance, p.getUniqueId(), p.getName());
     }
     
@@ -271,6 +271,7 @@ public class User {
         // if there is not home.
         getHome(name);
         yaml.set(HOMES + name, null);
+        dirty = true;
     }
     
     /**

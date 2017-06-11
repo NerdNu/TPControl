@@ -1092,9 +1092,8 @@ public class TPControl extends JavaPlugin implements Listener {
 	        user = getUser(p);
 	    } else if (args.length == 2) {
 	        // Go to the named home of another player.
-	        homeName = args[1];
 	        user = getUser(args[0]);
-	        
+	        homeName = args[1];
 	        // Check for private homes.
 	        if(!p.hasPermission("tpcontrol.homeadmin")) {
     	        if (user.getHomeVisibility(homeName) == HomeVisibility.PRIVATE) {
@@ -1230,7 +1229,7 @@ public class TPControl extends JavaPlugin implements Listener {
 
 	//Pull a user from the cache, or create it if necessary
     public User getUser(Player p) {
-        return getUser(p.toString());
+        return getUser(p.getName());
     }
     
     //Pull a user from the cache, or create it if necessary
@@ -1238,10 +1237,12 @@ public class TPControl extends JavaPlugin implements Listener {
         User u = user_cache.get(name.toLowerCase());
         if(u == null) {
             UUID uuid = uuidcache.getUUID(name);
+            name = uuidcache.getName(uuid); // Lookup canonical name (with correct case)
             if(uuid == null) {
                 throw new FormattedUserException(ChatColor.RED + "Cannot find player " + name + ".");
             }
             u = new User(this, uuid, name);
+            user_cache.put(name.toLowerCase(), u);
         }
         return u;
     }
