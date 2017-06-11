@@ -12,7 +12,6 @@ import java.util.regex.Pattern;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -41,14 +40,10 @@ public class User {
     private final String VISIBILITY = ".visibility";
 
     public User (TPControl instance, Player p) {
-        Init(instance, p.getName(), p.getUniqueId());
+        this(instance, p.getUniqueId(), p.getName());
     }
     
-    public User (TPControl instance, OfflinePlayer p) {
-        Init(instance, p.getName(), p.getUniqueId());
-    }
-    
-    private void Init(TPControl instance, String name, UUID uuid) {
+    public User(TPControl instance, UUID uuid, String name) {
         plugin = instance;
         username = name;
         this.uuid = uuid;
@@ -68,12 +63,9 @@ public class User {
             return;
         }
 
-//        plugin.getLogger().info("Saving user: " + username);
-
         try {
             yaml.save(prefs_path);
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
         dirty = false;
@@ -265,6 +257,7 @@ public class User {
      * @return
      */
     public HomeVisibility getHomeVisibility(String name) {
+        getHome(name); // Ensure the home exists.
         String vis = yaml.getString(HOMES + name + VISIBILITY, HomeVisibility.UNLISTED.toString());
         return HomeVisibility.valueOf(vis);
     }

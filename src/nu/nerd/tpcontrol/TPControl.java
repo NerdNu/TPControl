@@ -19,7 +19,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
@@ -58,6 +57,7 @@ public class TPControl extends JavaPlugin implements Listener {
 
     private HashMap<String,User> user_cache = new HashMap<String, User>();
     public HashMap<Player, WarpTask> warp_warmups = new HashMap<Player, WarpTask>();
+    private UUIDCache uuidcache = null;
 
     public Economy economy = null;
     private WorldBorder worldBorder = null;
@@ -94,6 +94,8 @@ public class TPControl extends JavaPlugin implements Listener {
             saveConfig();
         }
         config.load();
+        
+        uuidcache = new UUIDCache(this, new File(this.getDataFolder(), "uuidcache.yml"));
 
         //TODO: Can we get away with async?
         getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
@@ -112,6 +114,8 @@ public class TPControl extends JavaPlugin implements Listener {
         for(User u : user_cache.values()) {
             u.save();
         }
+        uuidcache.close();
+        uuidcache = null;
         log.info("TPControl has been disabled.");
     }
 
@@ -246,10 +250,10 @@ public class TPControl extends JavaPlugin implements Listener {
     		case "delwarp": cmdDelWarp(sender, args); return true;
     		case "cancelwarp": cmdCancelWarp(sender); return true;
     		case "randloc": cmdRandLoc(sender, args); return true;
-            case "home": cmdHome(sender, args); return true;
-    		case "sethome": cmdSetHome(sender, args); return true;
-    		case "delhome": cmdDelHome(sender, args); return true;
-    		case "listhomes": cmdListHomes(sender, args); return true;
+            case "home": return cmdHome(sender, args);
+    		case "sethome": return cmdSetHome(sender, args);
+    		case "delhome": return cmdDelHome(sender, args);
+    		case "listhomes": return cmdListHomes(sender, args);
     		default: return false;
         	}
         } catch (FormattedUserException e) {
@@ -1072,7 +1076,7 @@ public class TPControl extends JavaPlugin implements Listener {
 	 * @param sender
 	 * @param args
 	 */
-	public void cmdHome(CommandSender sender, String[] args) {
+	public boolean cmdHome(CommandSender sender, String[] args) {
 	    Player p = castPlayer(sender);
 	    String homeName = null; // home to teleport to
 	    User user = null; // User to get the home from.
@@ -1089,11 +1093,7 @@ public class TPControl extends JavaPlugin implements Listener {
 	    } else if (args.length == 2) {
 	        // Go to the named home of another player.
 	        homeName = args[1];
-	        OfflinePlayer p2 = this.getServer().getOfflinePlayer(args[0]);
-	        if (p2 == null) {
-	            throw new FormattedUserException(ChatColor.RED + "Cannot find player " + args[0] + ".");
-	        }
-	        user = getUser(p2);
+	        user = getUser(args[0]);
 	        
 	        // Check for private homes.
 	        if(!p.hasPermission("tpcontrol.homeadmin")) {
@@ -1112,7 +1112,7 @@ public class TPControl extends JavaPlugin implements Listener {
 	    // Teleport to the saved location.
 	    Location loc = user.getHome(homeName);
 	    p.teleport(loc);
-	    
+	    return true;
 	}
 	
 	/**
@@ -1121,7 +1121,7 @@ public class TPControl extends JavaPlugin implements Listener {
 	 * @param sender
 	 * @param args
 	 */
-	public void cmdSetHome(CommandSender sender, String[] args) {
+	public boolean cmdSetHome(CommandSender sender, String[] args) {
         Player p = castPlayer(sender);
         
         String homeName = "default";
@@ -1134,13 +1134,14 @@ public class TPControl extends JavaPlugin implements Listener {
             try{
             visibility = HomeVisibility.valueOf(args[1].toUpperCase());
             } catch (Exception e) {
-                throw new FormattedUserException("USAGE: /sethome [<name>] [{public | unlisted | private}]");
+                return false;
             }
         }
         
         User u = getUser(p);
         u.setHome(homeName, p.getLocation(), visibility);
         p.sendMessage(ChatColor.GRAY + "Home set.");
+        return true;
 	}
 	
 	/**
@@ -1149,7 +1150,7 @@ public class TPControl extends JavaPlugin implements Listener {
 	 * @param sender
 	 * @param args
 	 */
-    public void cmdDelHome(CommandSender sender, String[] args) {
+    public boolean cmdDelHome(CommandSender sender, String[] args) {
 	    Player p = castPlayer(sender);
 
 	    // Delete your own home
@@ -1165,12 +1166,7 @@ public class TPControl extends JavaPlugin implements Listener {
 	        }
 	        String playerName = args[0];
 	        String homeName = args[1];
-	        OfflinePlayer p2 = this.getServer().getOfflinePlayer(playerName);
-	        if (p2 == null) {
-	            throw new FormattedUserException(ChatColor.RED + "Cannot find player " + playerName + ".");
-	        }
-	        // Delete the home.
-	        getUser(p2).deleteHome(homeName);
+	        getUser(playerName).deleteHome(homeName);
 	        p.sendMessage(ChatColor.GRAY + "Home " + homeName + " cleared.");
 
 	    // Invalid arguments
@@ -1181,6 +1177,7 @@ public class TPControl extends JavaPlugin implements Listener {
 	            p.sendMessage(ChatColor.RED + "Usage: /delhome <name>");
 	        }
 	    }
+	    return true;
 	}
 	
 	/**
@@ -1188,32 +1185,31 @@ public class TPControl extends JavaPlugin implements Listener {
 	 * @param sender
 	 * @param args optional player name
 	 */
-	public void cmdListHomes(CommandSender sender, String[] args) {
+	public boolean cmdListHomes(CommandSender sender, String[] args) {
 	    Player p = castPlayer(sender);
-	    OfflinePlayer p2 = null;
+	    User u = null;
 	    boolean show_unlisted = false; // show unlisted and private homes
 	    String player_desc = null;
 
 	    if (args.length == 0) {
-	        p2 = p; // List your own homes.
+	        u = getUser(p); // List your own homes.
 	        show_unlisted = true;
 	        player_desc = "Your";
 	    }
 	    if (args.length == 1) {
-	        p2 = this.getServer().getOfflinePlayer(args[0]);
+	        u = getUser(args[0]);
 	        show_unlisted = p.hasPermission("tpcontrol.homeadmin");
-	        player_desc = p2.getName();
+	        player_desc = u.getUsername();
 	    }
-	    
-	    User u = getUser(p2);
+
 	    p.sendMessage(ChatColor.GRAY + player_desc + " homes:");
 	    for(String homeName : u.getHomeNames()) {
 	        HomeVisibility vis = u.getHomeVisibility(homeName);
 	        if (vis == HomeVisibility.PUBLIC || show_unlisted) {
-	            p.sendMessage(ChatColor.GRAY + homeName + " : " + vis.toString());
+	            p.sendMessage(ChatColor.GRAY + homeName + " [" + vis.toString() + "]");
 	        }
 	    }
-	    
+	    return true;
 	}
 
 	/**
@@ -1234,20 +1230,18 @@ public class TPControl extends JavaPlugin implements Listener {
 
 	//Pull a user from the cache, or create it if necessary
     public User getUser(Player p) {
-        User u = user_cache.get(p.getName().toLowerCase());
-        if(u == null) {
-            u = new User(this, p);
-            user_cache.put(p.getName().toLowerCase(), u);
-        }
-        return u;
+        return getUser(p.toString());
     }
     
     //Pull a user from the cache, or create it if necessary
-    public User getUser(OfflinePlayer p) {
-        User u = user_cache.get(p.getName().toLowerCase());
+    public User getUser(String name) {
+        User u = user_cache.get(name.toLowerCase());
         if(u == null) {
-            u = new User(this, p);
-            user_cache.put(p.getName().toLowerCase(), u);
+            UUID uuid = uuidcache.getUUID(name);
+            if(uuid == null) {
+                throw new FormattedUserException(ChatColor.RED + "Cannot find player " + name + ".");
+            }
+            u = new User(this, uuid, name);
         }
         return u;
     }
@@ -1355,7 +1349,7 @@ public class TPControl extends JavaPlugin implements Listener {
      * @param title Title of the list
      * @param list List to print
      */
-    public static void PrettyPrintUUIDList(CommandSender sender, String title, List<String> list) {
+    public void PrettyPrintUUIDList(CommandSender sender, String title, List<String> list) {
 
 		StringBuilder sb = new StringBuilder();
 		sb.append(ChatColor.GOLD);
@@ -1369,9 +1363,9 @@ public class TPControl extends JavaPlugin implements Listener {
 	        else
 	            sb.append(ChatColor.WHITE);
 
-	        OfflinePlayer p = Bukkit.getOfflinePlayer(UUID.fromString(s));
-	        if(p.getName() != null) {
-	        	sb.append(p.getName());
+	        String name = uuidcache.getName(UUID.fromString(s));
+	        if(name != null) {
+	        	sb.append(name);
 	        } else {
 	        	sb.append(s);
 	        }
