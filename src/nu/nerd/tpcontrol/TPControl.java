@@ -1205,7 +1205,7 @@ public class TPControl extends JavaPlugin implements Listener {
 	    for(String homeName : u.getHomeNames()) {
 	        HomeVisibility vis = u.getHomeVisibility(homeName);
 	        if (vis == HomeVisibility.PUBLIC || show_unlisted) {
-	            p.sendMessage(ChatColor.GRAY + homeName + " [" + vis.toString() + "]");
+	            p.sendMessage(ChatColor.GRAY + "  " + homeName + " [" + vis.toString() + "]");
 	        }
 	    }
 	    return true;

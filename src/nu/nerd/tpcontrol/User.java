@@ -3,11 +3,16 @@ package nu.nerd.tpcontrol;
 import java.io.File;
 import java.io.IOException;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import javax.annotation.Nullable;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -34,10 +39,9 @@ public class User {
     /** Valid characters for homes */
     private static Pattern validChars = Pattern.compile("^[A-Za-z_]+[A-Za-z_0-9]*");
     
-    private final String HOMES = "homes.";
-    private final String HOMES_NO_DOT = "homes";
-    private final String LOCATION = ".location";
-    private final String VISIBILITY = ".visibility";
+    private final String HOMES = "homes";
+    
+    private Map<String, Home> homes = new HashMap<String, Home>();
 
     public User(TPControl instance, Player p) {
         this(instance, p.getUniqueId(), p.getName());
@@ -56,12 +60,28 @@ public class User {
 
         yaml = YamlConfiguration.loadConfiguration(prefs_path);
         yaml.addDefault("mode", plugin.config.DEFAULT_MODE);
+        
+        // Populate the homes table. We keep it in deserialized form
+        // for quick access.
+        ConfigurationSection s = yaml.getConfigurationSection(HOMES);
+        if(s != null) {
+            for(String homeName : s.getKeys(false)) {
+                homes.put(homeName.toLowerCase(), 
+                        new Home(homeName, s));
+            }
+        }
+        yaml.set(HOMES, null); // Clear this to save memory.
+                               // We put it back on flush.
     }
 
     public void save() {
         if(!dirty) {
             return;
         }
+        
+        // Serialize all the home data
+        ConfigurationSection s = yaml.createSection(HOMES);
+        homes.values().forEach(home -> home.toYaml(s));
 
         try {
             yaml.save(prefs_path);
@@ -99,7 +119,6 @@ public class User {
         return yaml.getStringList(name);
     }
 
-    @SuppressWarnings("deprecation")
 	private boolean addToList(String name, String username) {
         List<String> l = getList(name);
 
@@ -119,7 +138,6 @@ public class User {
         return true;
     }
 
-    @SuppressWarnings("deprecation")
 	private boolean delFromList(String name, String username) {
         List<String> l = getList(name);
 
@@ -216,24 +234,26 @@ public class User {
     }
     
     /**
-     * Set a users home.
+     * Set a users home. This can be a new home.
      * 
-     * @param name
-     * @param loc
-     * @param visibility
+     * @param name Home name
+     * @param loc Location to set
+     * @param visibility Optional visibility
      */
-    public void setHome(String name, Location loc, HomeVisibility visibility) {
-        if(!validChars.matcher(name).matches()) {
-            throw new FormattedUserException(ChatColor.RED + "ERROR: Invalid home name");
+    public void setHome(String name, Location loc, @Nullable HomeVisibility vis) {
+        // Get the home
+        Home h = homes.get(name.toLowerCase());
+        if (h == null) {
+            h = new Home(name, loc, vis);
+            homes.put(name, h);
+        } else {
+            h.setName(name); // Update the case of the name.
+            h.setLocation(loc);
+            if(vis != null) {
+                h.setVisibility(vis);
+            }
         }
-        
-        // Set the location
-        yaml.set(HOMES + name + LOCATION, loc);
-        if(visibility != null) {
-            yaml.set(HOMES + name + VISIBILITY, visibility.toString());
-        }
-        dirty = true;
-        
+        dirty = true;        
     }
 
     /**
@@ -243,11 +263,11 @@ public class User {
      * @return
      */
     public Location getHome(String name) {
-        Object o = yaml.get(HOMES + name + LOCATION);
-        if(o == null || !(o instanceof Location)) {
+        Home h = homes.get(name.toLowerCase());
+        if (h == null) {
             throw new FormattedUserException(ChatColor.RED + "Home " + name + " not found.");
         }
-        return (Location)o;
+        return h.getLocation();
     }
     
     /**
@@ -257,21 +277,26 @@ public class User {
      * @return
      */
     public HomeVisibility getHomeVisibility(String name) {
-        getHome(name); // Ensure the home exists.
-        String vis = yaml.getString(HOMES + name + VISIBILITY, HomeVisibility.UNLISTED.toString());
-        return HomeVisibility.valueOf(vis);
+        Home h = homes.get(name.toLowerCase());
+        if (h == null) {
+            throw new FormattedUserException(ChatColor.RED + "Home " + name + " not found.");
+        }
+        return h.getVisibility();
     }
     
     /**
      * Delete a home location
      * @param name
+     * @return Name of the delete home
      */
-    public void deleteHome(String name) {
-        // Call getHome to see if the home exists. It will throw exceptions
-        // if there is not home.
-        getHome(name);
-        yaml.set(HOMES + name, null);
+    public String deleteHome(String name) {
+        Home h = homes.get(name.toLowerCase());
+        if (h == null) {
+            throw new FormattedUserException(ChatColor.RED + "Home " + name + " not found.");
+        }
+        homes.remove(name.toLowerCase());
         dirty = true;
+        return h.getName();
     }
     
     /**
@@ -280,11 +305,104 @@ public class User {
      * @return The homes.
      */
     public Set<String> getHomeNames() {
-        ConfigurationSection s = yaml.getConfigurationSection(HOMES_NO_DOT);
-        if (s == null) {
-            return new HashSet<String>();
-        } else {
-            return s.getKeys(false);
+        /*
+        Set<String> s = new HashSet<String>();
+        for(Home h : homes.values()) {
+            // Get the canonical name
+            s.add(h.getName());
+        }
+        return s;
+        */
+        // This is supposed to be more readable in java 8? o.O
+        return homes.values().stream()
+                .map(home -> home.getName())
+                .collect(Collectors.toSet());
+    }
+    
+    /**
+     * Load/Store the data from the "home" configuration
+     * sections. This is necessary to preserve case AND get
+     * case insensitive hash tables.
+     *
+     */
+    private class Home {
+        private String name; /** case sensitive name */
+        private Location loc; /** Location of this home */
+        private HomeVisibility vis; /** Visibility of this home */
+        
+        private final String LOCATION = "location";
+        private final String VISIBILITY = "visibility";
+        
+        /** Create a new home from a yaml configuration section.
+         * @param name Name of the section to read.
+         * @param s Section with all the home data.
+         * */
+        public Home(String name, ConfigurationSection s) {
+            s = s.getConfigurationSection(name);
+            this.name = name;
+            this.loc = (Location)s.get(LOCATION);
+            this.vis = HomeVisibility.valueOf(
+                    s.getString(VISIBILITY,
+                            HomeVisibility.UNLISTED.toString()));
+        }
+
+        /** Create a new home */
+        public Home(String name, Location loc, HomeVisibility vis) {
+            if(!validChars.matcher(name).matches()) {
+                throw new FormattedUserException(ChatColor.RED + "ERROR: Invalid home name");
+            }
+            this.name = name;
+            this.loc = loc;
+            if(vis == null) {
+                this.vis = HomeVisibility.UNLISTED;
+            } else {
+                this.vis = vis;
+            }
+        }
+        
+        public String getName() {
+            return name;
+        }
+        
+        public void setName(String name) {
+            this.name = name;
+            dirty = true;
+        }
+        
+        public Location getLocation() {
+            return loc;
+        }
+        
+        public void setLocation(Location loc) {
+            if (loc == null) {
+                throw new IllegalArgumentException("loc cannot be null");
+            }
+            this.loc = loc;
+            dirty = true;
+        }
+        
+        public HomeVisibility getVisibility() {
+            return vis;
+        }
+        
+        public void setVisibility(HomeVisibility vis) {
+            if (vis == null) {
+                throw new IllegalArgumentException("vis cannot be null");
+            }
+            this.vis = vis;
+            dirty = true;
+        }
+        
+        /**
+         * Write config to yaml. This method will create its own
+         * sub-section to save its own keys.
+         * 
+         * @param s The "homes" section.
+         */
+        public void toYaml(ConfigurationSection s) {
+            s = s.createSection(name);
+            s.set(LOCATION, loc);
+            s.set(VISIBILITY, vis.toString());
         }
     }
 }
