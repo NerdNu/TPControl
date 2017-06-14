@@ -55,7 +55,7 @@ public class TPControl extends JavaPlugin implements Listener {
     //private final TPControlListener cmdlistener = new TPControlListener(this);
     public final Configuration config = new Configuration(this);
 
-    private HashMap<String,User> user_cache = new HashMap<String, User>();
+    private HashMap<UUID,User> user_cache = new HashMap<UUID, User>();
     public HashMap<Player, WarpTask> warp_warmups = new HashMap<Player, WarpTask>();
     private UUIDCache uuidcache = null;
 
@@ -1229,7 +1229,12 @@ public class TPControl extends JavaPlugin implements Listener {
 
 	//Pull a user from the cache, or create it if necessary
     public User getUser(Player p) {
-        return getUser(p.getName());
+        User u = user_cache.get(p.getUniqueId());
+        if (u == null) {
+            u = new User(this, p.getUniqueId(), p.getName());
+            user_cache.put(p.getUniqueId(), u);
+        }
+        return u;
     }
     
     //Pull a user from the cache, or create it if necessary
@@ -1238,11 +1243,12 @@ public class TPControl extends JavaPlugin implements Listener {
         if(uuid == null) {
             throw new FormattedUserException(ChatColor.RED + "Cannot find player " + name + ".");
         }
-        String canonicalName = uuidcache.getName(uuid);
-        User u = user_cache.get(canonicalName.toLowerCase());
+        User u = user_cache.get(uuid);
         if(u == null) {
-            u = new User(this, uuid, canonicalName);
-            user_cache.put(canonicalName.toLowerCase(), u);
+            // Be sure to get the canonical name from the uuidcache, not the
+            // supplied partial name. (Fixes capitalization too).
+            u = new User(this, uuid, uuidcache.getName(uuid));
+            user_cache.put(uuid, u);
         }
         return u;
     }
