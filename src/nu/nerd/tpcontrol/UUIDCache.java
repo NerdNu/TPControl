@@ -100,7 +100,7 @@ public class UUIDCache implements AutoCloseable {
         }
 
         // cleanup
-        flush();
+        flush(false);
         _uuid_to_name = null;
         _name_to_uuid = null;
     }
@@ -253,8 +253,9 @@ public class UUIDCache implements AutoCloseable {
     
     /**
      * Flush the cache to disk.
+     * @param async True to save asynchronously
      */
-    private void flush() {
+    private void flush(boolean async) {
         if (!dirty) {
             return;
         }
@@ -263,14 +264,39 @@ public class UUIDCache implements AutoCloseable {
         YamlConfiguration yaml = new YamlConfiguration();
         for(UUID uuid : _uuid_to_name.keySet()) {
             yaml.set(uuid.toString(), _uuid_to_name.get(uuid));
-        }
-        try {
-            yaml.save(_configFile);
-        } catch (IOException ex) {
-            _plugin.getLogger().severe("Cannot save player UUID Cache! " + ex.toString());
+        }        
+        if(async == false) {
+            try {
+                yaml.save(_configFile);
+                dirty = false;
+            } catch (IOException ex) {
+                _plugin.getLogger().severe("Cannot save player UUID Cache! " + ex.toString());
+            }
             return;
         }
-        dirty = false;
+        
+        // Save on async thread
+        _plugin.getServer().getScheduler().runTaskAsynchronously(_plugin, 
+            new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        yaml.save(_configFile);
+                        dirty = false; // Writing to boolean's from different threads is A-OK ;)
+                    } catch (IOException ex) {
+                        // Print error log on synchronous thread
+                        _plugin.getServer().getScheduler().runTask(_plugin,
+                            new Runnable() {
+                                @Override
+                                public void run() {
+                                    _plugin.getLogger().severe("Cannot save player UUID Cache! " + ex.toString());
+                                }
+                            }
+                        );
+                    }
+                }
+            }
+        );
     }
 
     /**
@@ -292,7 +318,7 @@ public class UUIDCache implements AutoCloseable {
 
         @Override
         public void run() {
-            flush();
+            flush(true);
         }
         
     }
