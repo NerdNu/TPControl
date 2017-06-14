@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -14,7 +13,6 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
@@ -122,12 +120,8 @@ public class User {
 	private boolean addToList(String name, String username) {
         List<String> l = getList(name);
 
-        String uuid = null;
-        Player perp = plugin.getPlayer(username);
-        if (perp != null)
-            uuid = perp.getUniqueId().toString();
-        else 
-            uuid = Bukkit.getOfflinePlayer(username).getUniqueId().toString();
+        String uuid = plugin.getUUIDCache().getUUID(username).toString();
+
         if(l.contains(uuid)) {
             return false;
         }
@@ -147,12 +141,7 @@ public class User {
         if (l.contains(username)) {
         	uuid = username;
         } else {
-	        Player perp = plugin.getPlayer(username);
-	        if (perp != null)
-	            uuid = perp.getUniqueId().toString();
-	        else
-	            uuid = Bukkit.getOfflinePlayer(username).getUniqueId().toString();
-	        
+            uuid = plugin.getUUIDCache().getUUID(username).toString();
 	        if(!l.contains(uuid)) {
 	            return false;
 	        }

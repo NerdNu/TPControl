@@ -1378,4 +1378,12 @@ public class TPControl extends JavaPlugin implements Listener {
 		}
 		sender.sendMessage(sb.toString());
     }
+    
+    /**
+     * Return the UUID Cache
+     * @return The Cache
+     */
+    public UUIDCache getUUIDCache() {
+        return uuidcache;
+    }
 }

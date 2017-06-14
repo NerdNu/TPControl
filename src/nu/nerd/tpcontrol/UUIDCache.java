@@ -22,10 +22,8 @@ import org.bukkit.scheduler.BukkitTask;
  * Maintain a two way cache between players and UUIDs.
  * 
  * The yaml cache keeps everything in RAM for maximum
- * speed. Only players that have been explicitly added
- * to the cache will be tracked. Every time a tracked
- * player logs on, their player name will automatically
- * updated to match their UUID.
+ * speed. Every time a player logs in, their UUID will
+ * be added to the cache.
  * 
  * NOTE: The _uuid_to_name map has the canonical name.
  * the names in _name_to_uuid are squashed to lower case.
