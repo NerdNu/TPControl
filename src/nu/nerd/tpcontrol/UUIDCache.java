@@ -127,7 +127,7 @@ public class UUIDCache implements AutoCloseable {
         String nameLow = name.toLowerCase();
         
         // Quick check
-        UUID uuid = _name_to_uuid.get(name);
+        UUID uuid = _name_to_uuid.get(nameLow);
         if (uuid != null) {
             return uuid;
         }
