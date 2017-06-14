@@ -2,9 +2,10 @@ package nu.nerd.tpcontrol;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -34,13 +35,13 @@ public class UUIDCache implements AutoCloseable {
     private JavaPlugin _plugin;
     private MyListener _listener;
     private File _configFile;
-    
+
     /** Secondary mapping from name to UUID. Some entries may be missing if duplicate names appear (Caused by player renaming) */
-    private Map<String, UUID> _name_to_uuid = new ConcurrentHashMap<String, UUID>();
-    
+    private TreeMap<String, UUID> _name_to_uuid = new TreeMap<String, UUID>();
+
     /** Primary mapping from UUID and name */
-    private Map<UUID, String> _uuid_to_name = new ConcurrentHashMap<UUID, String>();
-    
+    private Map<UUID, String> _uuid_to_name = new HashMap<UUID, String>();
+
     /** Try to not leak these in the server */
     private BukkitTask _task = null;
     
@@ -123,11 +124,44 @@ public class UUIDCache implements AutoCloseable {
      * @return UUID, or null if not found.
      */
     public UUID getUUID(String name) {
-        Player p = _plugin.getServer().getPlayer(name);
-        if(p == null) {
-            return _name_to_uuid.get(name.toLowerCase());
+        String nameLow = name.toLowerCase();
+        
+        // Quick check
+        UUID uuid = _name_to_uuid.get(name);
+        if (uuid != null) {
+            return uuid;
+        }
+
+        // Pull out the first 2 entries bigger than name.
+        // The equal too case has already been checked.
+        Map.Entry<String, UUID> entry1 = null;
+        Map.Entry<String, UUID> entry2 = null;
+        int i = 0;
+        for(Map.Entry<String, UUID> entry : _name_to_uuid.tailMap(nameLow).entrySet()) {
+            if(i == 0) {
+                entry1 = entry;
+            } else {
+                entry2 = entry;
+                break;
+            }
+            i++;
+        }
+
+        // See if the requested name is a prefix
+        boolean entry1prefix = false;
+        boolean entry2prefix = false;
+        if(entry1 != null) {
+            entry1prefix = entry1.getKey().startsWith(nameLow);
+        }
+        if(entry2 != null) {
+            entry2prefix = entry2.getKey().startsWith(nameLow);
+        }
+        
+        // Return the expanded name if we have it bounded.
+        if (entry1prefix && !entry2prefix) {
+            return entry1.getValue();
         } else {
-            return p.getUniqueId();
+            return null;
         }
     }
     
