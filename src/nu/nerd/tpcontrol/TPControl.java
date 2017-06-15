@@ -1239,15 +1239,22 @@ public class TPControl extends JavaPlugin implements Listener {
     
     //Pull a user from the cache, or create it if necessary
     public User getUser(String name) {
-        UUID uuid = uuidcache.getUUID(name); // NOTE: This can guess partial names.
-        if(uuid == null) {
-            throw new FormattedUserException(ChatColor.RED + "Cannot find player " + name + ".");
+        UUID uuid = null;
+        Player p = getServer().getPlayer(name);
+        if(p == null) {
+            uuid = uuidcache.getUUID(name); // NOTE: This can guess partial names.
+            if(uuid == null) {
+                throw new FormattedUserException(ChatColor.RED + "Cannot find player " + name + ".");
+            }
+            name = uuidcache.getName(uuid); // Get canonical name.
+        } else {
+            uuid = p.getUniqueId();
+            name = p.getName();
         }
+
         User u = user_cache.get(uuid);
         if(u == null) {
-            // Be sure to get the canonical name from the uuidcache, not the
-            // supplied partial name. (Fixes capitalization too).
-            u = new User(this, uuid, uuidcache.getName(uuid));
+            u = new User(this, uuid, name);
             user_cache.put(uuid, u);
         }
         return u;
