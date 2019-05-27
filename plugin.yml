@@ -5,6 +5,8 @@ website: ${project.url}
 author: [Barney Gale, Deaygo, c45y, slide, Challenger2]
 main: nu.nerd.tpcontrol.TPControl
 softdepend: [Vault, WorldBorder, WorldGuard]
+api-version: 1.13
+
 permissions:
     tpcontrol.level.*:
         description: Teleport user class.
