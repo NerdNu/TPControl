@@ -4,7 +4,7 @@ description: ${project.description}
 website: ${project.url}
 author: [Barney Gale, Deaygo, c45y, slide, Challenger2]
 main: nu.nerd.tpcontrol.TPControl
-softdepend: [Vault, WorldBorder, WorldGuard]
+softdepend: [Vault, WorldBorder, WorldGuard, Multiverse-Core]
 api-version: 1.13
 
 permissions:
