@@ -59,7 +59,7 @@ public class TPControl extends JavaPlugin implements Listener {
     // TPControlListener(this);
     public final Configuration config = new Configuration(this);
 
-    private HashMap<UUID, User> user_cache = new HashMap<UUID, User>();
+    private final HashMap<UUID, User> user_cache = new HashMap<UUID, User>();
     public HashMap<Player, WarpTask> warp_warmups = new HashMap<Player, WarpTask>();
     private UUIDCache uuidcache = null;
 
@@ -1000,12 +1000,12 @@ public class TPControl extends JavaPlugin implements Listener {
 
         if (w1 != null) {
             this.config.WARPS.remove(args[0].toLowerCase());
+            getConfig().set("warps." + w1.getName(), null);
             sender.sendMessage(ChatColor.RED + "Removed warp " + args[0]);
         } else {
             sender.sendMessage(ChatColor.RED + "Warp does not exist.");
         }
 
-        getConfig().set("warps." + args[0], null);
         saveConfig();
     }
 
@@ -1368,7 +1368,7 @@ public class TPControl extends JavaPlugin implements Listener {
         try {
             Constructor<PluginCommand> c = PluginCommand.class.getDeclaredConstructor(new Class[] { String.class, Plugin.class });
             c.setAccessible(true);
-            command = (PluginCommand) c.newInstance(new Object[] { name, this });
+            command = c.newInstance(new Object[] { name, this });
         } catch (Exception ex) {
             getLogger().log(Level.WARNING, "exception creating command", ex);
         }
