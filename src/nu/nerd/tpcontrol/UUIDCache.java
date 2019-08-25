@@ -16,58 +16,64 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
-
 /**
  * 
  * Maintain a two way cache between players and UUIDs.
  * 
- * The yaml cache keeps everything in RAM for maximum
- * speed. Every time a player logs in, their UUID will
- * be added to the cache.
+ * The yaml cache keeps everything in RAM for maximum speed. Every time a player
+ * logs in, their UUID will be added to the cache.
  * 
- * NOTE: The _uuid_to_name map has the canonical name.
- * the names in _name_to_uuid are squashed to lower case.
- *
+ * NOTE: The _uuid_to_name map has the canonical name. the names in
+ * _name_to_uuid are squashed to lower case.
  */
-public class UUIDCache implements AutoCloseable {
-    
-    private JavaPlugin _plugin;
-    private MyListener _listener;
-    private File _configFile;
+public class UUIDCache implements AutoCloseable, Listener {
+    /**
+     * Period in ticks between saves, i.e. flush().
+     */
+    private static final int FLUSH_PERIOD_TICKS = 20 * 60;
 
-    /** Secondary mapping from name to UUID. Some entries may be missing if duplicate names appear (Caused by player renaming) */
+    private final JavaPlugin _plugin;
+    private final File _configFile;
+
+    /**
+     * Secondary mapping from name to UUID. Some entries may be missing if
+     * duplicate names appear (Caused by player renaming)
+     */
     private TreeMap<String, UUID> _name_to_uuid = new TreeMap<String, UUID>(String.CASE_INSENSITIVE_ORDER);
 
     /** Primary mapping from UUID and name */
     private Map<UUID, String> _uuid_to_name = new ConcurrentHashMap<UUID, String>();
 
-    /** Try to not leak these in the server */
-    private BukkitTask _task = null;
-    
-    /** Flag set if things need to be saved to disk */
-    private boolean dirty = false;
+    /**
+     * Repeated Bukkit scheduler task to save the UUID cache to disk.
+     */
+    private BukkitTask _saveTask = null;
+
+    /**
+     * Flag set if things need to be saved to disk.
+     */
+    private volatile boolean _dirty = false;
 
     public UUIDCache(JavaPlugin plugin, File config) {
         _plugin = plugin;
-       _listener = new MyListener();
-       _configFile = config;
+        _configFile = config;
 
         // Load in the player cache
         YamlConfiguration yaml = YamlConfiguration.loadConfiguration(_configFile);
-        for(String UUIDString : yaml.getKeys(false)) {
-            String name = yaml.getString(UUIDString);
-            
+        for (String uuidString : yaml.getKeys(false)) {
+            String name = yaml.getString(uuidString);
+
             // Parse UUID
             UUID uuid;
             try {
-                uuid = UUID.fromString(UUIDString);
+                uuid = UUID.fromString(uuidString);
             } catch (IllegalArgumentException e) {
-                _plugin.getLogger().warning("Culling invalid UUID \"" + UUIDString + "\".");
+                _plugin.getLogger().warning("Culling invalid UUID \"" + uuidString + "\".");
                 continue;
             }
 
             // Ensure there are no duplicate player names.
-            if(_name_to_uuid.containsKey(name)) {
+            if (_name_to_uuid.containsKey(name)) {
                 _plugin.getLogger().warning("Culling duplicate player name \"" + name + "\".");
                 // Remove both player names. This will be fixed on next log-in.
                 _name_to_uuid.remove(name);
@@ -78,23 +84,25 @@ public class UUIDCache implements AutoCloseable {
             _uuid_to_name.put(uuid, name);
             _name_to_uuid.put(name, uuid);
         }
-        
-        _plugin.getServer().getPluginManager().registerEvents(_listener, _plugin);
-        _task = _plugin.getServer().getScheduler().runTaskTimer(_plugin, new CacheFlusher(), 20*60, 20*60);
+
+        _plugin.getServer().getPluginManager().registerEvents(this, _plugin);
+        _saveTask = _plugin.getServer().getScheduler().runTaskTimer(_plugin, () -> flush(true),
+                                                                    FLUSH_PERIOD_TICKS, FLUSH_PERIOD_TICKS);
     }
-    
+
     /**
-     * Close everything down. This _really_ should be called
-     * during plugin.Unload().
+     * Close everything down. This _really_ should be called during
+     * plugin.Unload().
+     * 
      * @throws Exception
      */
     @Override
     public void close() {
         // Release spigot resources
-        HandlerList.unregisterAll(_listener);
-        if(_task != null) {
-            _task.cancel();
-            _task = null;
+        HandlerList.unregisterAll(this);
+        if (_saveTask != null) {
+            _saveTask.cancel();
+            _saveTask = null;
         }
 
         // cleanup
@@ -112,7 +120,7 @@ public class UUIDCache implements AutoCloseable {
     public String getName(UUID uuid) {
         return _uuid_to_name.get(uuid);
     }
-    
+
     /**
      * Get the UUID associated with this name, or null.
      * 
@@ -139,13 +147,13 @@ public class UUIDCache implements AutoCloseable {
         // See if the requested name is a prefix
         boolean entry1prefix = false;
         boolean entry2prefix = false;
-        if(entry1 != null) {
+        if (entry1 != null) {
             entry1prefix = entry1.getKey().toLowerCase().startsWith(name.toLowerCase());
         }
-        if(entry2 != null) {
+        if (entry2 != null) {
             entry2prefix = entry2.toLowerCase().startsWith(name.toLowerCase());
         }
-       
+
         // Return the expanded name if we have it bounded.
         if (entry1prefix && !entry2prefix) {
             return entry1.getValue();
@@ -153,7 +161,7 @@ public class UUIDCache implements AutoCloseable {
             return null;
         }
     }
-    
+
     /**
      * Get the UUID associated with this name, or null.
      * 
@@ -165,9 +173,10 @@ public class UUIDCache implements AutoCloseable {
     public UUID getUUIDExact(String name) {
         return _name_to_uuid.get(name);
     }
-    
+
     /**
      * Remove a UUID from the cache.
+     * 
      * @param uuid
      */
     public void untrack(UUID uuid) {
@@ -187,7 +196,7 @@ public class UUIDCache implements AutoCloseable {
         // First, see if there are any changes so we don't dirty the cache
         String refName = _uuid_to_name.get(uuid);
         UUID refUUID = _name_to_uuid.get(name);
-        if(name.equals(refName) && uuid.equals(refUUID)) {
+        if (name.equals(refName) && uuid.equals(refUUID)) {
             return;
         }
 
@@ -203,9 +212,9 @@ public class UUIDCache implements AutoCloseable {
         // Now map it correctly.
         _uuid_to_name.put(uuid, name);
         _name_to_uuid.put(name, uuid);
-        dirty = true;
+        _dirty = true;
     }
-    
+
     /**
      * Clear uuid->name->uuid chains.
      * 
@@ -214,97 +223,68 @@ public class UUIDCache implements AutoCloseable {
      * @param uuid Chain to clear.
      */
     private void clearUUID(UUID uuid) {
-        if(_uuid_to_name.containsKey(uuid)) {
+        if (_uuid_to_name.containsKey(uuid)) {
             String name = _uuid_to_name.get(uuid);
-            if(name != null) {
-                _uuid_to_name.put(uuid, null); // null UUID->name so we keep tracking it.
+            if (name != null) {
+                _uuid_to_name.put(uuid, null); // null UUID->name so we keep
+                                               // tracking it.
                 clearName(name);
-                dirty = true;
+                _dirty = true;
             }
         }
     }
-    
+
     /**
      * Clear name->uuid->name chains.
      * 
      * @param name Chain to clear.
      */
     private void clearName(String name) {
-        if(_name_to_uuid.containsKey(name)) {
+        if (_name_to_uuid.containsKey(name)) {
             UUID uuid = _name_to_uuid.get(name);
             _name_to_uuid.remove(name); // Remove name->UUID
             clearUUID(uuid);
-            dirty = true;
+            _dirty = true;
         }
     }
-    
+
     /**
      * Flush the cache to disk.
+     * 
      * @param async True to save asynchronously
      */
     private void flush(boolean async) {
-        if (!dirty) {
+        if (!_dirty) {
             return;
         }
 
-        if (async == false) {
+        final Runnable flushTask = () -> {
             try {
-                // Make a new blank config.
                 YamlConfiguration yaml = new YamlConfiguration();
                 for (UUID uuid : _uuid_to_name.keySet()) {
                     yaml.set(uuid.toString(), _uuid_to_name.get(uuid));
                 }
                 yaml.save(_configFile);
-                dirty = false;
+                _dirty = false;
             } catch (Exception ex) {
-                _plugin.getLogger().severe(
-                        "Cannot save player UUID Cache! " + ex.toString());
+                _plugin.getLogger().severe("Cannot save player UUID Cache! " + ex.toString());
             }
+        };
+
+        if (async) {
+            _plugin.getServer().getScheduler().runTaskAsynchronously(_plugin, flushTask);
         } else {
-            // Save on async thread
-            _plugin.getServer().getScheduler().runTaskAsynchronously(_plugin,
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            // Make a new blank config.
-                            YamlConfiguration yaml = new YamlConfiguration();
-                            for (UUID uuid : _uuid_to_name.keySet()) {
-                                yaml.set(uuid.toString(), _uuid_to_name.get(uuid));
-                            }
-                            yaml.save(_configFile);
-                            dirty = false; // Writing to boolean's from
-                                           // different threads is A-OK ;)
-                        } catch (Exception ex) {
-                            _plugin.getLogger().severe("Cannot save player UUID Cache! " + ex.toString());
-                        }
-                    }
-                }
-            );
+            flushTask.run();
         }
     }
 
     /**
      * Watch for player join events.
      */
-    private class MyListener implements Listener {
-    
-        @EventHandler(priority = EventPriority.NORMAL)
-        void onPlayerJoin(PlayerJoinEvent e) {
-            // Cache all players
-            updateCache(e.getPlayer());
-        }
+    @EventHandler(priority = EventPriority.NORMAL)
+    void onPlayerJoin(PlayerJoinEvent e) {
+        // Cache all players
+        updateCache(e.getPlayer());
     }
-    
-    /**
-     * Flush the cache every now and again.
-     */
-    private class CacheFlusher implements Runnable {
 
-        @Override
-        public void run() {
-            flush(true);
-        }
-        
-    }
 }
