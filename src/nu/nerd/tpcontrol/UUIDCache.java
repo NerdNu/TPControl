@@ -94,10 +94,14 @@ public class UUIDCache implements AutoCloseable, Listener {
      * Close everything down. This _really_ should be called during
      * plugin.Unload().
      * 
+     * This method is synchronized so as not to clear uuid<->name maps while
+     * flushing the cache async.
+     * 
      * @throws Exception
      */
     @Override
-    public void close() {
+    public synchronized void close() {
+
         // Release spigot resources
         HandlerList.unregisterAll(this);
         if (_saveTask != null) {
@@ -258,23 +262,34 @@ public class UUIDCache implements AutoCloseable, Listener {
             return;
         }
 
-        final Runnable flushTask = () -> {
-            try {
-                YamlConfiguration yaml = new YamlConfiguration();
-                for (UUID uuid : _uuid_to_name.keySet()) {
-                    yaml.set(uuid.toString(), _uuid_to_name.get(uuid));
-                }
-                yaml.save(_configFile);
-                _dirty = false;
-            } catch (Exception ex) {
-                _plugin.getLogger().severe("Cannot save player UUID Cache! " + ex.toString());
-            }
-        };
-
         if (async) {
-            _plugin.getServer().getScheduler().runTaskAsynchronously(_plugin, flushTask);
+            _plugin.getServer().getScheduler().runTaskAsynchronously(_plugin, () -> saveUUIDCache());
         } else {
-            flushTask.run();
+            saveUUIDCache();
+        }
+    }
+
+    /**
+     * Save the cache to disk.
+     * 
+     * This method is synchronized to serialize it relative to close(), which
+     * sets the uuid map to null.
+     */
+    private synchronized void saveUUIDCache() {
+        if (_uuid_to_name == null) {
+            // close() has been called.
+            return;
+        }
+
+        try {
+            YamlConfiguration yaml = new YamlConfiguration();
+            for (UUID uuid : _uuid_to_name.keySet()) {
+                yaml.set(uuid.toString(), _uuid_to_name.get(uuid));
+            }
+            yaml.save(_configFile);
+            _dirty = false;
+        } catch (Exception ex) {
+            _plugin.getLogger().severe("Cannot save player UUID Cache! " + ex.toString());
         }
     }
 
