@@ -32,16 +32,27 @@ public class UUIDCache implements AutoCloseable, Listener {
      */
     private static final int FLUSH_PERIOD_TICKS = 20 * 60;
 
+    /**
+     * The owning plugin.
+     */
     private final JavaPlugin _plugin;
+
+    /**
+     * The name of the YAML file where
+     */
     private final File _configFile;
 
     /**
-     * Secondary mapping from name to UUID. Some entries may be missing if
-     * duplicate names appear (Caused by player renaming)
+     * Secondary mapping from case-insensitive name to UUID. Some entries may be
+     * missing if duplicate names appear (caused by player renaming).
      */
     private TreeMap<String, UUID> _name_to_uuid = new TreeMap<String, UUID>(String.CASE_INSENSITIVE_ORDER);
 
-    /** Primary mapping from UUID and name */
+    /**
+     * Primary mapping from UUID to case-correct name. Note: ConcurrentHashMap
+     * throws NPE if you try to set the value associated with a key to null;
+     * remove the key instead.
+     */
     private Map<UUID, String> _uuid_to_name = new ConcurrentHashMap<UUID, String>();
 
     /**
@@ -52,7 +63,7 @@ public class UUIDCache implements AutoCloseable, Listener {
     /**
      * Flag set if things need to be saved to disk.
      */
-    private volatile boolean _dirty = false;
+    private boolean _dirty = false;
 
     public UUIDCache(JavaPlugin plugin, File config) {
         _plugin = plugin;
@@ -101,7 +112,6 @@ public class UUIDCache implements AutoCloseable, Listener {
      */
     @Override
     public synchronized void close() {
-
         // Release spigot resources
         HandlerList.unregisterAll(this);
         if (_saveTask != null) {
@@ -118,8 +128,8 @@ public class UUIDCache implements AutoCloseable, Listener {
     /**
      * Get the name associated with this UUID, or null.
      * 
-     * @param uuid
-     * @return
+     * @param uuid the UUID to look up.
+     * @return the associated case-correct name, or null if not found.
      */
     public String getName(UUID uuid) {
         return _uuid_to_name.get(uuid);
@@ -130,11 +140,11 @@ public class UUIDCache implements AutoCloseable, Listener {
      * 
      * Partial player names are accepted.
      * 
-     * @param name
+     * @param name the case-insensitive partial name of the player.
      * @return UUID, or null if not found.
      */
     public UUID getUUID(String name) {
-        // Quick check
+        // Exact match to name.
         UUID uuid = _name_to_uuid.get(name);
         if (uuid != null) {
             return uuid;
@@ -171,47 +181,40 @@ public class UUIDCache implements AutoCloseable, Listener {
      * 
      * Partial player names are NOT accepted.
      * 
-     * @param name
+     * @param name the player name to search for.
      * @return UUID, or null if not found.
      */
     public UUID getUUIDExact(String name) {
+        // Note: TreeMap instantiated with case insensitive comparator.
         return _name_to_uuid.get(name);
-    }
-
-    /**
-     * Remove a UUID from the cache.
-     * 
-     * @param uuid
-     */
-    public void untrack(UUID uuid) {
-        clearUUID(uuid);
     }
 
     /**
      * Merge and update a player into the cache.
      * 
+     * This method is synchronized because the _dirty flag is mutated in the
+     * save thread. Without it, the dirty flag could be set true here, then
+     * immediately cleared by an async save and the map entries would never hit
+     * the disk.
+     * 
      * @param uuid Player's uuid
      * @param name Player's name
      */
-    private void updateCache(Player p) {
+    private synchronized void updateCache(Player p) {
         UUID uuid = p.getUniqueId();
         String name = p.getName();
 
         // First, see if there are any changes so we don't dirty the cache
-        String refName = _uuid_to_name.get(uuid);
-        UUID refUUID = _name_to_uuid.get(name);
+        String refName = getName(uuid);
+        UUID refUUID = getUUIDExact(name);
+
+        // refName has canonical case.
         if (name.equals(refName) && uuid.equals(refUUID)) {
             return;
         }
 
-        // Its important not to overwrite a uuid or name mapping because player
-        // can change and then reuse old names. UUID is considered De-Facto.
-        //
-        // It is even possible for two players to switch names and uuids!!! :O
-
-        // Clear the uuid and player chains
-        clearUUID(uuid); // this uuid could map to another player's name.
-        clearName(name); // this name could map to another player's uuid.
+        // Remove old name to UUID mapping if present.
+        _name_to_uuid.remove(refName);
 
         // Now map it correctly.
         _uuid_to_name.put(uuid, name);
@@ -220,44 +223,13 @@ public class UUIDCache implements AutoCloseable, Listener {
     }
 
     /**
-     * Clear uuid->name->uuid chains.
-     * 
-     * NOTE: _uuid_to_name may contain null keys.
-     * 
-     * @param uuid Chain to clear.
-     */
-    private void clearUUID(UUID uuid) {
-        if (_uuid_to_name.containsKey(uuid)) {
-            String name = _uuid_to_name.get(uuid);
-            if (name != null) {
-                _uuid_to_name.put(uuid, null); // null UUID->name so we keep
-                                               // tracking it.
-                clearName(name);
-                _dirty = true;
-            }
-        }
-    }
-
-    /**
-     * Clear name->uuid->name chains.
-     * 
-     * @param name Chain to clear.
-     */
-    private void clearName(String name) {
-        if (_name_to_uuid.containsKey(name)) {
-            UUID uuid = _name_to_uuid.get(name);
-            _name_to_uuid.remove(name); // Remove name->UUID
-            clearUUID(uuid);
-            _dirty = true;
-        }
-    }
-
-    /**
      * Flush the cache to disk.
+     * 
+     * This method is synchronized because _dirty is mutated in the save thread.
      * 
      * @param async True to save asynchronously
      */
-    private void flush(boolean async) {
+    private synchronized void flush(boolean async) {
         if (!_dirty) {
             return;
         }
@@ -283,8 +255,8 @@ public class UUIDCache implements AutoCloseable, Listener {
 
         try {
             YamlConfiguration yaml = new YamlConfiguration();
-            for (UUID uuid : _uuid_to_name.keySet()) {
-                yaml.set(uuid.toString(), _uuid_to_name.get(uuid));
+            for (Map.Entry<UUID, String> entry : _uuid_to_name.entrySet()) {
+                yaml.set(entry.getKey().toString(), entry.getValue());
             }
             yaml.save(_configFile);
             _dirty = false;
