@@ -214,7 +214,9 @@ public class UUIDCache implements AutoCloseable, Listener {
         }
 
         // Remove old name to UUID mapping if present.
-        _name_to_uuid.remove(refName);
+        if (refName != null) {
+            _name_to_uuid.remove(refName);
+        }
 
         // Now map it correctly.
         _uuid_to_name.put(uuid, name);
