@@ -14,11 +14,7 @@ import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.command.Command;
@@ -162,7 +158,7 @@ public class TPControl extends JavaPlugin implements Listener {
         if (event.getClickedBlock() == null || event.getAction() != Action.RIGHT_CLICK_BLOCK) {
             return;
         }
-        if (event.getClickedBlock().getType() == Material.WALL_SIGN) {
+        if (Tag.WALL_SIGNS.isTagged(event.getClickedBlock().getType())) {
             Sign s = (Sign) event.getClickedBlock().getState();
             Player p = event.getPlayer();
             if (event.getItem() != null && event.getItem().getType() == Material.DIAMOND_HOE) {
