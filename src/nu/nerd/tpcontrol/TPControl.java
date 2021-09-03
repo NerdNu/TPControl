@@ -1047,7 +1047,7 @@ public class TPControl extends JavaPlugin implements Listener {
         // Figure out the world size and setup
         final World world = p.getWorld();
         RegionManager regionManager = null;
-        org.bukkit.WorldBorder borderData = null;
+        WorldBorder borderData = null;
 
         if (worldGuard != null) {
             regionManager = WorldGuard.getInstance().getPlatform().getRegionContainer().get(BukkitAdapter.adapt(world));
