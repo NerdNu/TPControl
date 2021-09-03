@@ -14,14 +14,15 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.spigotmc</groupId>
-            <artifactId>spigot-api</artifactId>
-            <version>1.13.2-R0.1-SNAPSHOT</version>
+            <groupId>io.papermc.paper</groupId>
+            <artifactId>paper-api</artifactId>
+            <version>1.17.1-R0.1-SNAPSHOT</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>net.milkbowl.vault</groupId>
             <artifactId>VaultAPI</artifactId>
-            <version>1.6</version>
+            <version>1.7</version>
         </dependency>
         <dependency>
             <groupId>com.wimbli.WorldBorder</groupId>
@@ -42,11 +43,11 @@
         </repository>
         <repository>
             <id>vault-repo</id>
-            <url>http://nexus.hc.to/content/repositories/pub_releases</url>
+            <url>https://nexus.hc.to/content/repositories/pub_releases</url>
         </repository>
         <repository>
-            <id>sk89q</id>
-            <url>http://maven.sk89q.com/repo</url>
+            <id>sk89q-repo</id>
+            <url>https://maven.enginehub.org/repo/</url>
         </repository>
         <repository>
             <id>papermc</id>
@@ -73,7 +74,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-jar-plugin</artifactId>
-                    <version>3.0.2</version>
+                    <version>3.2.0</version>
                     <configuration>
                         <archive>
                             <addMavenDescriptor>false</addMavenDescriptor>
@@ -84,10 +85,10 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.5.1</version>
+                    <version>3.8.1</version>
                     <configuration>
-                        <source>1.8</source>
-                        <target>1.8</target>
+                        <source>16</source>
+                        <target>16</target>
                     </configuration>
                 </plugin>
             </plugins>
