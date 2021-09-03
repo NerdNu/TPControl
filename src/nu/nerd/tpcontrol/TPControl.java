@@ -170,7 +170,7 @@ public class TPControl extends JavaPlugin implements Listener {
                     if (!s.getLine(1).isEmpty() && s.getLine(1).matches("\\s*-*\\d+\\s*,\\s*-*\\d+\\s*,\\s*-*\\d+\\s*")) {
                         String[] sCo = s.getLine(1).split(",");
                         // Change our strings to ints, remember to remove spaces
-                        // because people can be stupid about fomatting
+                        // because people can be stupid about formatting
                         Location tp = new Location(p.getWorld(), Integer.parseInt(sCo[0].trim()), Integer.parseInt(sCo[1].trim()),
                             Integer.parseInt(sCo[2].trim()));
                         p.teleport(tp);
