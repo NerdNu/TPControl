@@ -14,11 +14,7 @@ import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.command.Command;
@@ -47,8 +43,6 @@ import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
 import com.sk89q.worldguard.protection.ApplicableRegionSet;
 import com.sk89q.worldguard.protection.managers.RegionManager;
-import com.wimbli.WorldBorder.BorderData;
-import com.wimbli.WorldBorder.WorldBorder;
 
 import net.milkbowl.vault.economy.Economy;
 
@@ -64,7 +58,6 @@ public class TPControl extends JavaPlugin implements Listener {
     private UUIDCache uuidcache = null;
 
     public Economy economy = null;
-    private WorldBorder worldBorder = null;
     private WorldGuardPlugin worldGuard = null;
 
     @Override
@@ -80,11 +73,7 @@ public class TPControl extends JavaPlugin implements Listener {
             }
         }
 
-        Plugin plugin = getServer().getPluginManager().getPlugin("WorldBorder");
-        if (plugin != null && plugin instanceof WorldBorder)
-            worldBorder = (WorldBorder) plugin;
-
-        plugin = getServer().getPluginManager().getPlugin("WorldGuard");
+        Plugin plugin = getServer().getPluginManager().getPlugin("WorldGuard");
         if (plugin != null && plugin instanceof WorldGuardPlugin)
             worldGuard = (WorldGuardPlugin) plugin;
 
@@ -162,7 +151,7 @@ public class TPControl extends JavaPlugin implements Listener {
         if (event.getClickedBlock() == null || event.getAction() != Action.RIGHT_CLICK_BLOCK) {
             return;
         }
-        if (event.getClickedBlock().getType() == Material.WALL_SIGN) {
+        if (Tag.WALL_SIGNS.isTagged(event.getClickedBlock().getType())) {
             Sign s = (Sign) event.getClickedBlock().getState();
             Player p = event.getPlayer();
             if (event.getItem() != null && event.getItem().getType() == Material.DIAMOND_HOE) {
@@ -181,7 +170,7 @@ public class TPControl extends JavaPlugin implements Listener {
                     if (!s.getLine(1).isEmpty() && s.getLine(1).matches("\\s*-*\\d+\\s*,\\s*-*\\d+\\s*,\\s*-*\\d+\\s*")) {
                         String[] sCo = s.getLine(1).split(",");
                         // Change our strings to ints, remember to remove spaces
-                        // because people can be stupid about fomatting
+                        // because people can be stupid about formatting
                         Location tp = new Location(p.getWorld(), Integer.parseInt(sCo[0].trim()), Integer.parseInt(sCo[1].trim()),
                             Integer.parseInt(sCo[2].trim()));
                         p.teleport(tp);
@@ -1045,7 +1034,7 @@ public class TPControl extends JavaPlugin implements Listener {
      */
     private void cmdRandLoc(CommandSender sender, String[] args) {
         // Check perms
-        if (!(sender instanceof Player)) {
+        if (!(sender instanceof final Player p)) {
             sender.sendMessage("Etherial beings cannot be teleported. Sorry :(");
             return;
         }
@@ -1056,32 +1045,25 @@ public class TPControl extends JavaPlugin implements Listener {
         }
 
         // Figure out the world size and setup
-        Player p = (Player) sender;
+        final World world = p.getWorld();
         RegionManager regionManager = null;
-        BorderData borderData = null;
+        WorldBorder borderData = null;
 
         if (worldGuard != null) {
-            com.sk89q.worldedit.world.World world = BukkitAdapter.adapt(p.getWorld());
-            regionManager = WorldGuard.getInstance().getPlatform().getRegionContainer().get(world);
-        }
-        if (worldBorder != null) {
-            borderData = worldBorder.getWorldBorder(p.getWorld().getName());
+            regionManager = WorldGuard.getInstance().getPlatform().getRegionContainer().get(BukkitAdapter.adapt(world));
         }
 
-        // Figure out the world shape
-        if (borderData == null) {
-            p.sendMessage(ChatColor.RED + "ERROR: Cannot get world size from WorldBorder plugin");
-            return;
-        }
+        borderData = world.getWorldBorder();
+        final Location center = borderData.getCenter();
 
         // Pick random locations until we find a good one
         for (int i = 0; i < 100; i++) {
-            double x = (2.0 * Math.random() - 1.0) * borderData.getRadiusX() + borderData.getX();
-            double z = (2.0 * Math.random() - 1.0) * borderData.getRadiusZ() + borderData.getZ();
+            double x = (2.0 * Math.random() - 1.0) * borderData.getSize() + center.getX();
+            double z = (2.0 * Math.random() - 1.0) * borderData.getSize() + center.getZ();
 
             // Reject all points outside the border. We need this because
             // circular borders are smaller than our random location.
-            if (!borderData.insideBorder(x, z))
+            if (!borderData.isInside(new Location(world, x, world.getMinHeight(), z)))
                 continue;
 
             // Calculate y offset
