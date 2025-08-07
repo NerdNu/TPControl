@@ -14,6 +14,9 @@ import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
@@ -80,14 +83,11 @@ public class TPControl extends JavaPlugin implements Listener {
 		uuidcache = new UUIDCache(this, new File(this.getDataFolder(), "uuidcache.yml"));
 
 		// TODO: Can we get away with async?
-		getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
-			@Override
-			public void run() {
-				for (User u : user_cache.values()) {
-					u.save();
-				}
-			}
-		}, config.SAVE_INTERVAL * 20, config.SAVE_INTERVAL * 20);
+		getServer().getScheduler().scheduleSyncRepeatingTask(this, () -> {
+            for (User u : user_cache.values()) {
+                u.save();
+            }
+        }, config.SAVE_INTERVAL * 20, config.SAVE_INTERVAL * 20);
 
 		log.info("TPControl has been enabled!");
 	}
@@ -299,7 +299,6 @@ public class TPControl extends JavaPlugin implements Listener {
 		if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
 			config.load();
 			sender.sendMessage("Reloaded config.");
-			return;
 		}
 	}
 
@@ -314,18 +313,18 @@ public class TPControl extends JavaPlugin implements Listener {
 		}
 		Player p1 = (Player) sender;
 		if (!canTP(p1)) {
-			messagePlayer(p1, "You do not have permission.", ChatColor.RED);
+			messagePlayer(p1, "You do not have permission.", NamedTextColor.RED);
 			return;
 		}
 
 		if (args.length != 1) {
-			messagePlayer(p1, "Usage: /tp <player>", ChatColor.GOLD);
+			messagePlayer(p1, "Usage: /tp <player>", NamedTextColor.GOLD);
 			return;
 		}
 
 		Player p2 = getPlayer(args[0]);
 		if (p2 == null) {
-			messagePlayer(p1, "Couldn't find player " + args[0], ChatColor.RED);
+			messagePlayer(p1, "Couldn't find player " + args[0], NamedTextColor.RED);
 			return;
 		}
 
@@ -340,13 +339,13 @@ public class TPControl extends JavaPlugin implements Listener {
 		}
 
 		if (mode.equals("allow")) {
-			messagePlayer(p1, "Teleporting you to " + p2.getName() + ".", ChatColor.GREEN);
+			messagePlayer(p1, "Teleporting you to " + p2.getName() + ".", NamedTextColor.GREEN);
 			teleport(p1, p2);
 		} else if (mode.equals("ask")) {
-			messagePlayer(p1, "A request has been sent to " + p2.getName() + ".", ChatColor.GREEN);
+			messagePlayer(p1, "A request has been sent to " + p2.getName() + ".", NamedTextColor.GREEN);
 			u2.lodgeRequest(p1);
 		} else if (mode.equals("deny")) {
-			messagePlayer(p1, p2.getName() + " has teleportation disabled.", ChatColor.RED);
+			messagePlayer(p1, p2.getName() + " has teleportation disabled.", NamedTextColor.RED);
 		}
 	}
 
@@ -362,7 +361,7 @@ public class TPControl extends JavaPlugin implements Listener {
 		Player p = (Player) sender;
 
 		if (!p.hasPermission("tpcontrol.back")) {
-			messagePlayer(p, "You do not have permission.", ChatColor.RED);
+			messagePlayer(p, "You do not have permission.", NamedTextColor.RED);
 			return;
 		}
 
@@ -374,7 +373,7 @@ public class TPControl extends JavaPlugin implements Listener {
 			u.setLastLocation(null);
 			p.teleport(l);
 		} else {
-			p.sendMessage(ChatColor.RED + "No last location saved for you.");
+			messagePlayer(p, "No last location saved for you.", NamedTextColor.RED);
 		}
 	}
 
@@ -399,7 +398,7 @@ public class TPControl extends JavaPlugin implements Listener {
 			w = getServer().getWorld(args[0]);
 			args = new String[]{args[1], args[2], args[3]};
 			if (w == null) {
-				sender.sendMessage(ChatColor.RED + "An invalid world was provided.");
+				sender.sendMessage("An invalid world was provided.");
 				return;
 			}
 		} else {
@@ -434,28 +433,33 @@ public class TPControl extends JavaPlugin implements Listener {
 		Player p2 = (Player) sender;
 
 		if (!canTP(p2)) {
-			messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+			messagePlayer(p2, "You do not have permission.", NamedTextColor.RED);
 			return true;
 		}
 
 		if (args.length != 1) {
-			messagePlayer(p2, "Usage: /tphere <player>", ChatColor.GOLD);
+			messagePlayer(p2, "Usage: /tphere <player>", NamedTextColor.GOLD);
 			return true;
 		}
 
 		Player p1 = getPlayer(args[0]);
 		if (p1 == null) {
-			messagePlayer(p2, "Couldn't find player " + args[0], ChatColor.RED);
+			Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
+				if(this.getServer().getOfflinePlayer(args[0]).hasPlayedBefore()) {
+
+				}
+			});
+			messagePlayer(p2, "Couldn't find player " + args[0], NamedTextColor.RED);
 			return true;
 		}
 
 		if (canTP(p2) && canOverride(p2, p1)) {
-			messagePlayer(p1, p2.getName() + " teleported you to them.", ChatColor.GREEN);
-			messagePlayer(p2, "Teleporting " + p1.getName() + " to you.", ChatColor.GREEN);
+			messagePlayer(p1, p2.getName() + " teleported you to them.", NamedTextColor.GREEN);
+			messagePlayer(p2, "Teleporting " + p1.getName() + " to you.", NamedTextColor.GREEN);
 			teleport(p1, p2);
 			return true;
 		} else {
-			messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+			messagePlayer(p2, "You do not have permission.", NamedTextColor.RED);
 			return true;
 		}
 	}
@@ -472,7 +476,7 @@ public class TPControl extends JavaPlugin implements Listener {
 		Player p2 = (Player) sender;
 
 		if (!canTP(p2)) {
-			messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+			messagePlayer(p2, "You do not have permission.", NamedTextColor.RED);
 			return;
 		}
 
@@ -481,11 +485,11 @@ public class TPControl extends JavaPlugin implements Listener {
 		if (args.length != 1 || (!args[0].equals("allow")
 				&& !args[0].equals("ask")
 				&& !args[0].equals("deny"))) {
-			messagePlayer(p2, "Usage: /tpmode allow|ask|deny", ChatColor.GOLD);
-			messagePlayer(p2, "You are currently in " + u2.getMode().toUpperCase() + " mode.", ChatColor.GOLD);
+			messagePlayer(p2, "Usage: /tpmode allow|ask|deny", NamedTextColor.GOLD);
+			messagePlayer(p2, "You are currently in " + u2.getMode().toUpperCase() + " mode.", NamedTextColor.GOLD);
 		} else {
 			u2.setMode(args[0]);
-			messagePlayer(p2, "You are now in " + args[0].toUpperCase() + " mode.", ChatColor.GOLD);
+			messagePlayer(p2, "You are now in " + args[0].toUpperCase() + " mode.", NamedTextColor.GOLD);
 		}
 	}
 
@@ -500,7 +504,7 @@ public class TPControl extends JavaPlugin implements Listener {
 		Player p2 = (Player) sender;
 
 		if (!canTP(p2)) {
-			messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+			messagePlayer(p2, "You do not have permission.", NamedTextColor.RED);
 			return;
 		}
 
@@ -508,14 +512,14 @@ public class TPControl extends JavaPlugin implements Listener {
 
 		// Check the field exists...
 		if (u2.last_applicant == null) {
-			messagePlayer(p2, "Error: No one has attempted to tp to you lately!", ChatColor.RED);
+			messagePlayer(p2, "Error: No one has attempted to tp to you lately!", NamedTextColor.RED);
 			return;
 		}
 
 		// Check it hasn't expired
 		Date t = new Date();
 		if (t.getTime() > u2.last_applicant_time + 1000L * config.ASK_EXPIRE) {
-			messagePlayer(p2, "Error: /tp request has expired!", ChatColor.RED);
+			messagePlayer(p2, "Error: /tp request has expired!", NamedTextColor.RED);
 			return;
 		}
 
@@ -527,8 +531,8 @@ public class TPControl extends JavaPlugin implements Listener {
 		}
 
 		u2.last_applicant = null;
-		messagePlayer(p1, "Teleporting you to " + p2.getName() + ".", ChatColor.GREEN);
-		messagePlayer(p2, "Teleporting " + p1.getName() + " to you.", ChatColor.GREEN);
+		messagePlayer(p1, "Teleporting you to " + p2.getName() + ".", NamedTextColor.GREEN);
+		messagePlayer(p2, "Teleporting " + p1.getName() + " to you.", NamedTextColor.GREEN);
 		teleport(p1, p2);
 	}
 
@@ -544,19 +548,19 @@ public class TPControl extends JavaPlugin implements Listener {
 		Player p2 = (Player) sender;
 
 		if (!canTP(p2)) {
-			messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+			messagePlayer(p2, "You do not have permission.", NamedTextColor.RED);
 			return;
 		}
 
 		User u2 = getUser(p2);
 
 		if (u2.last_applicant == null) {
-			messagePlayer(p2, "Error: No one has attempted to tp to you lately!", ChatColor.RED);
+			messagePlayer(p2, "Error: No one has attempted to tp to you lately!", NamedTextColor.RED);
 			return;
 		}
 
-		messagePlayer(p2, "Denied a request from " + u2.last_applicant + ".", ChatColor.RED);
-		messagePlayer(p2, "Use '/tpblock " + u2.last_applicant + "' to block further requests", ChatColor.RED);
+		messagePlayer(p2, "Denied a request from " + u2.last_applicant + ".", NamedTextColor.RED);
+		messagePlayer(p2, "Use '/tpblock " + u2.last_applicant + "' to block further requests", NamedTextColor.RED);
 		u2.last_applicant = null;
 	}
 
@@ -572,7 +576,7 @@ public class TPControl extends JavaPlugin implements Listener {
 		Player p2 = (Player) sender;
 
 		if (!canTP(p2)) {
-			messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+			messagePlayer(p2, "You do not have permission.", NamedTextColor.RED);
 			return;
 		}
 
@@ -583,13 +587,13 @@ public class TPControl extends JavaPlugin implements Listener {
 		} else if (args.length == 1) {
 			// Add a new friend
 			if (u2.addFriend(args[0])) {
-				messagePlayer(p2, args[0] + " added as a friend.", ChatColor.GREEN);
+				messagePlayer(p2, args[0] + " added as a friend.", NamedTextColor.GREEN);
 			} else {
-				messagePlayer(p2, "Error: " + args[0] + " is already a friend.", ChatColor.GOLD);
+				messagePlayer(p2, "Error: " + args[0] + " is already a friend.", NamedTextColor.GOLD);
 			}
 		} else {
 			// Invalid arguments
-			messagePlayer(p2, "Usage: /tpfriend [<player>]", ChatColor.GOLD);
+			messagePlayer(p2, "Usage: /tpfriend [<player>]", NamedTextColor.GOLD);
 		}
 	}
 
@@ -606,7 +610,7 @@ public class TPControl extends JavaPlugin implements Listener {
 		Player p2 = (Player) sender;
 
 		if (!canTP(p2)) {
-			messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+			messagePlayer(p2, "You do not have permission.", NamedTextColor.RED);
 			return;
 		}
 
@@ -616,12 +620,12 @@ public class TPControl extends JavaPlugin implements Listener {
 			PrettyPrintUUIDList(sender, "Friends", u2.getFriends());
 		} else if (args.length == 1) {
 			if (u2.delFriend(args[0])) {
-				messagePlayer(p2, args[0] + " removed from friends.", ChatColor.GREEN);
+				messagePlayer(p2, args[0] + " removed from friends.", NamedTextColor.GREEN);
 			} else {
-				messagePlayer(p2, "Error: " + args[0] + " not on friends list.", ChatColor.GOLD);
+				messagePlayer(p2, "Error: " + args[0] + " not on friends list.", NamedTextColor.GOLD);
 			}
 		} else {
-			messagePlayer(p2, "Usage: /tpunfriend [<player>]", ChatColor.RED);
+			messagePlayer(p2, "Usage: /tpunfriend [<player>]", NamedTextColor.RED);
 		}
 	}
 
@@ -637,7 +641,7 @@ public class TPControl extends JavaPlugin implements Listener {
 		Player p2 = (Player) sender;
 
 		if (!canTP(p2)) {
-			messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+			messagePlayer(p2, "You do not have permission.", NamedTextColor.RED);
 			return;
 		}
 
@@ -647,12 +651,12 @@ public class TPControl extends JavaPlugin implements Listener {
 			PrettyPrintUUIDList(sender, "Blocked: ", u2.getBlocked());
 		} else if (args.length == 1) {
 			if (u2.addBlocked(args[0])) {
-				messagePlayer(p2, args[0] + " was blocked from teleporting to you.", ChatColor.GREEN);
+				messagePlayer(p2, args[0] + " was blocked from teleporting to you.", NamedTextColor.GREEN);
 			} else {
-				messagePlayer(p2, "Error: " + args[0] + " is already blocked.", ChatColor.GOLD);
+				messagePlayer(p2, "Error: " + args[0] + " is already blocked.", NamedTextColor.GOLD);
 			}
 		} else {
-			messagePlayer(p2, "Usage: /tpblock [<player>]", ChatColor.GOLD);
+			messagePlayer(p2, "Usage: /tpblock [<player>]", NamedTextColor.GOLD);
 		}
 
 	}
@@ -670,7 +674,7 @@ public class TPControl extends JavaPlugin implements Listener {
 		Player p2 = (Player) sender;
 
 		if (!canTP(p2)) {
-			messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+			messagePlayer(p2, "You do not have permission.", NamedTextColor.RED);
 			return;
 		}
 
@@ -680,12 +684,12 @@ public class TPControl extends JavaPlugin implements Listener {
 			PrettyPrintUUIDList(sender, "Blocked: ", u2.getBlocked());
 		} else if (args.length == 1) {
 			if (u2.delBlocked(args[0])) {
-				messagePlayer(p2, args[0] + " was unblocked from teleporting to you.", ChatColor.GREEN);
+				messagePlayer(p2, args[0] + " was unblocked from teleporting to you.", NamedTextColor.GREEN);
 			} else {
-				messagePlayer(p2, "Error: " + args[0] + " is not blocked.", ChatColor.GOLD);
+				messagePlayer(p2, "Error: " + args[0] + " is not blocked.", NamedTextColor.GOLD);
 			}
 		} else {
-			messagePlayer(p2, "Usage: /tpunblock [<player>]", ChatColor.GOLD);
+			messagePlayer(p2, "Usage: /tpunblock [<player>]", NamedTextColor.GOLD);
 		}
 
 	}
@@ -702,29 +706,35 @@ public class TPControl extends JavaPlugin implements Listener {
 			player = (Player) sender;
 		}
 
-		StringBuilder sb = new StringBuilder();
+		Component warpMessage = Component.text("Warps: ", NamedTextColor.GOLD);
 		int j = 0;
 		Iterator<Warp> i = this.config.WARPS.values().iterator();
+		int warpListSize = this.config.WARPS.size();
 		while (i.hasNext()) {
 			Warp warp = i.next();
+			TextComponent singleWarpComponent;
 
+			// Whether to add a comma or not
+			if(warpListSize >= 2 && j != warpListSize) {
+				singleWarpComponent = Component.text(warp.getName() + ", ");
+			} else {
+				singleWarpComponent = Component.text(warp.getName());
+			}
+
+			// Determine the colour
 			if (player == null || canWarp(player, warp)) {
 				if (j % 2 == 0) {
-					sb.append(ChatColor.GRAY);
+					singleWarpComponent = singleWarpComponent.color(NamedTextColor.GRAY);
 				} else {
-					sb.append(ChatColor.WHITE);
+					singleWarpComponent = singleWarpComponent.color(NamedTextColor.WHITE);
 				}
 
-				sb.append(warp.getName()).append(", ");
+				warpMessage = warpMessage.append(singleWarpComponent);
 				j++;
 			}
 		}
-		String list = sb.toString();
-		if (list.length() >= 2) {
-			list = list.substring(0, list.length() - 2);
-		}
 
-		sender.sendMessage(ChatColor.GOLD + "Warps: " + list);
+		sender.sendMessage(warpMessage);
 	}
 
 	/**
@@ -745,26 +755,26 @@ public class TPControl extends JavaPlugin implements Listener {
 		}
 
 		if (args.length != 1) {
-			messagePlayer(p2, "Usage: /warp <warp>", ChatColor.GOLD);
+			messagePlayer(p2, "Usage: /warp <warp>", NamedTextColor.GOLD);
 			return;
 		}
 
 		final Warp w1 = this.config.WARPS.get(args[0].toLowerCase());
 
 		if (w1 == null) {
-			messagePlayer(p2, "That warp does not exist.", ChatColor.RED);
+			messagePlayer(p2, "That warp does not exist.", NamedTextColor.RED);
 			return;
 		}
 
 		if (!canWarp(p2, w1)) {
-			messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+			messagePlayer(p2, "You do not have permission.", NamedTextColor.RED);
 			return;
 		}
 
 		Date now = new Date();
 		Date p2cd = w1.getCooldown(p2);
 		if (p2cd != null && !now.after(new Date(p2cd.getTime() + w1.getCooldown() * 1000))) {
-			messagePlayer(p2, "You must wait ", ChatColor.RED);
+			messagePlayer(p2, "You must wait ", NamedTextColor.RED);
 			return;
 		}
 
@@ -773,13 +783,13 @@ public class TPControl extends JavaPlugin implements Listener {
 			if (p2wu != null) {
 				int elapsed = (int) ((now.getTime() - p2wu.getTime()) / 1000);
 				int remaining = w1.getWarmup() - elapsed;
-				messagePlayer(p2, "You have " + remaining + " second(s) of warmup remaining.", ChatColor.RED);
+				messagePlayer(p2, "You have " + remaining + " second(s) of warmup remaining.", NamedTextColor.RED);
 
 				return;
 			} else {
-				messagePlayer(p2, "There is a " + w1.getWarmup() + " second warmup for this warp.", ChatColor.RED);
+				messagePlayer(p2, "There is a " + w1.getWarmup() + " second warmup for this warp.", NamedTextColor.RED);
 				if (w1.doesWarmupCancelOnMove()) {
-					messagePlayer(p2, "You must not move during this time", ChatColor.RED);
+					messagePlayer(p2, "You must not move during this time", NamedTextColor.RED);
 				}
 
 				WarpTask warpTask = new WarpTask(this, w1, p2);
@@ -813,12 +823,12 @@ public class TPControl extends JavaPlugin implements Listener {
 		final Player p2 = (Player) sender;
 
 		if (!p2.hasPermission("tpcontrol.setwarp")) {
-			messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+			messagePlayer(p2, "You do not have permission.", NamedTextColor.RED);
 			return;
 		}
 
 		if (args.length < 1) {
-			messagePlayer(p2, "Usage: /setwarp <name> [option] [values...]", ChatColor.GOLD);
+			messagePlayer(p2, "Usage: /setwarp <name> [option] [values...]", NamedTextColor.GOLD);
 			return;
 		}
 
@@ -836,78 +846,78 @@ public class TPControl extends JavaPlugin implements Listener {
 
 		if (option.equalsIgnoreCase("location")) {
 			w1.setLocation(p2.getLocation());
-			messagePlayer(p2, "Set location for warp " + args[0], ChatColor.GOLD);
+			messagePlayer(p2, "Set location for warp " + args[0], NamedTextColor.GOLD);
 		} else if (option.equalsIgnoreCase("warmup")) {
 			if (args.length != 3) {
-				messagePlayer(p2, "Usage: /setwarp <name> warmup <number>", ChatColor.RED);
+				messagePlayer(p2, "Usage: /setwarp <name> warmup <number>", NamedTextColor.RED);
 				return;
 			}
 
 			int warmup = Integer.parseInt(args[2]);
 			w1.setWarmup(warmup);
-			messagePlayer(p2, "Set warmup for warp " + args[0], ChatColor.GOLD);
+			messagePlayer(p2, "Set warmup for warp " + args[0], NamedTextColor.GOLD);
 		} else if (option.equalsIgnoreCase("warmup-cancel-on-move")) {
 			if (args.length != 3) {
-				messagePlayer(p2, "Usage: /setwarp <name> warmup-cancel-on-move <true/false>", ChatColor.RED);
+				messagePlayer(p2, "Usage: /setwarp <name> warmup-cancel-on-move <true/false>", NamedTextColor.RED);
 				return;
 			}
 
 			boolean warmupCancelOnMove = Boolean.parseBoolean(args[2]);
 			w1.setWarmupCancelOnMove(warmupCancelOnMove);
-			messagePlayer(p2, "Set warmup cancel-on-move for warp " + args[0], ChatColor.GOLD);
+			messagePlayer(p2, "Set warmup cancel-on-move for warp " + args[0], NamedTextColor.GOLD);
 		} else if (option.equalsIgnoreCase("warmup-cancel-on-damage")) {
 			if (args.length != 3) {
-				messagePlayer(p2, "Usage: /setwarp <name> warmup-cancel-on-damage <true/false>", ChatColor.RED);
+				messagePlayer(p2, "Usage: /setwarp <name> warmup-cancel-on-damage <true/false>", NamedTextColor.RED);
 				return;
 			}
 
 			boolean warmupCancelOnDamage = Boolean.parseBoolean(args[2]);
 			w1.setWarmupCancelOnDamage(warmupCancelOnDamage);
-			messagePlayer(p2, "Set warmup cancel-on-damage for warp " + args[0], ChatColor.GOLD);
+			messagePlayer(p2, "Set warmup cancel-on-damage for warp " + args[0], NamedTextColor.GOLD);
 		} else if (option.equalsIgnoreCase("cooldown")) {
 			if (args.length != 3) {
-				messagePlayer(p2, "Usage: /setwarp <name> cooldown <number>", ChatColor.RED);
+				messagePlayer(p2, "Usage: /setwarp <name> cooldown <number>", NamedTextColor.RED);
 				return;
 			}
 
 			int cooldown = Integer.parseInt(args[2]);
 			w1.setCooldown(cooldown);
-			messagePlayer(p2, "Set cooldown for warp " + args[0], ChatColor.GOLD);
+			messagePlayer(p2, "Set cooldown for warp " + args[0], NamedTextColor.GOLD);
 		} else if (option.equalsIgnoreCase("balance-min")) {
 			if (args.length != 3) {
-				messagePlayer(p2, "Usage: /setwarp <name> balance-min <number>", ChatColor.RED);
+				messagePlayer(p2, "Usage: /setwarp <name> balance-min <number>", NamedTextColor.RED);
 				return;
 			}
 
 			int balanceMin = Integer.parseInt(args[2]);
 			w1.setBalanceMin(balanceMin);
-			messagePlayer(p2, "Set min balance for warp " + args[0], ChatColor.GOLD);
+			messagePlayer(p2, "Set min balance for warp " + args[0], NamedTextColor.GOLD);
 		} else if (option.equalsIgnoreCase("balance-max")) {
 			if (args.length != 3) {
-				messagePlayer(p2, "Usage: /setwarp <name> balance-max <number>", ChatColor.RED);
+				messagePlayer(p2, "Usage: /setwarp <name> balance-max <number>", NamedTextColor.RED);
 				return;
 			}
 
 			int balanceMax = Integer.parseInt(args[2]);
 			w1.setBalanceMax(balanceMax);
-			messagePlayer(p2, "Set max balance for warp " + args[0], ChatColor.GOLD);
+			messagePlayer(p2, "Set max balance for warp " + args[0], NamedTextColor.GOLD);
 		} else if (option.equalsIgnoreCase("allow-back")) {
 			if (args.length != 3) {
-				messagePlayer(p2, "Usage: /setwarp <name> allow-back <true/false>", ChatColor.RED);
+				messagePlayer(p2, "Usage: /setwarp <name> allow-back <true/false>", NamedTextColor.RED);
 				return;
 			}
 
 			boolean allowBack = Boolean.parseBoolean(args[2]);
 			w1.setAllowBack(allowBack);
-			messagePlayer(p2, "Set allow-back for warp " + args[0], ChatColor.GOLD);
+			messagePlayer(p2, "Set allow-back for warp " + args[0], NamedTextColor.GOLD);
 		} else if (option.equalsIgnoreCase("public")) {
 			if (args.length != 3) {
-				messagePlayer(p2, "Usage: /setwarp <name> public <true/false>", ChatColor.RED);
+				messagePlayer(p2, "Usage: /setwarp <name> public <true/false>", NamedTextColor.RED);
 				return;
 			}
 			boolean pub = Boolean.parseBoolean(args[2]);
 			w1.setPublic(pub);
-			messagePlayer(p2, "Set public to " + pub + " for warp " + args[0], ChatColor.GOLD);
+			messagePlayer(p2, "Set public to " + pub + " for warp " + args[0], NamedTextColor.GOLD);
 		} else if (option.equalsIgnoreCase("shortcuts")) {
 			List<String> shortcuts = new ArrayList<String>();
 			for (int i = 2; i < args.length; i++) {
@@ -920,7 +930,7 @@ public class TPControl extends JavaPlugin implements Listener {
 				getCommand(shortcut).setExecutor(shortcutCommand);
 			}
 
-			messagePlayer(p2, "Set shortcuts for warp " + args[0], ChatColor.GOLD);
+			messagePlayer(p2, "Set shortcuts for warp " + args[0], NamedTextColor.GOLD);
 		}
 
 		getConfig().set("warps." + w1.getName() + ".location.world", w1.getLocation().getWorld().getName());
@@ -944,12 +954,12 @@ public class TPControl extends JavaPlugin implements Listener {
 	 */
 	private void cmdDelWarp(CommandSender sender, String[] args) {
 		if (!sender.hasPermission("tpcontrol.delwarp")) {
-			sender.sendMessage(ChatColor.RED + "You do not have permission.");
+			sender.sendMessage(Component.text("You do not have permission.", NamedTextColor.RED));
 			return;
 		}
 
 		if (args.length != 1) {
-			sender.sendMessage(ChatColor.RED + "Usage: /delwarp <name>");
+			sender.sendMessage(Component.text("Usage: /delwarp <name>", NamedTextColor.RED));
 			return;
 		}
 
@@ -958,9 +968,9 @@ public class TPControl extends JavaPlugin implements Listener {
 		if (w1 != null) {
 			this.config.WARPS.remove(args[0].toLowerCase());
 			getConfig().set("warps." + w1.getName(), null);
-			sender.sendMessage(ChatColor.RED + "Removed warp " + args[0]);
+			sender.sendMessage(Component.text("Removed warp \" + args[0]", NamedTextColor.RED));
 		} else {
-			sender.sendMessage(ChatColor.RED + "Warp does not exist.");
+			sender.sendMessage(Component.text("Warp does not exist.", NamedTextColor.RED));
 		}
 
 		saveConfig();
@@ -971,19 +981,19 @@ public class TPControl extends JavaPlugin implements Listener {
 	 */
 	private void cmdCancelWarp(CommandSender sender) {
 		if (!(sender instanceof Player)) {
-			sender.sendMessage("This cannot be run from the console!");
+			sender.sendMessage(Component.text("This cannot be run from the console!"));
 			return;
 		}
 
 		final Player p2 = (Player) sender;
 
 		if (!p2.hasPermission("tpcontrol.cancelwarp")) {
-			messagePlayer(p2, "You do not have permission.", ChatColor.RED);
+			messagePlayer(p2, "You do not have permission.", NamedTextColor.RED);
 			return;
 		}
 
 		if (warp_warmups.containsKey(p2)) {
-			messagePlayer(p2, "Cancelling warp.", ChatColor.RED);
+			messagePlayer(p2, "Cancelling warp.", NamedTextColor.RED);
 			WarpTask wt1 = warp_warmups.get(p2);
 			wt1.cancel();
 			warp_warmups.remove(p2);
@@ -991,7 +1001,7 @@ public class TPControl extends JavaPlugin implements Listener {
 			return;
 		}
 
-		messagePlayer(p2, "You have no warp to cancel.", ChatColor.RED);
+		messagePlayer(p2, "You have no warp to cancel.", NamedTextColor.RED);
 	}
 
 	/**
@@ -1008,7 +1018,7 @@ public class TPControl extends JavaPlugin implements Listener {
 		}
 
 		if (!sender.hasPermission("tpcontrol.randloc")) {
-			sender.sendMessage(ChatColor.RED + "You do not have permission to use /randloc");
+			sender.sendMessage(Component.text("You do not have permission to use /randloc", NamedTextColor.RED));
 			return;
 		}
 
@@ -1084,15 +1094,12 @@ public class TPControl extends JavaPlugin implements Listener {
 			// Check for private homes.
 			if (!p.hasPermission("tpcontrol.homeadmin")) {
 				if (user.getHomeVisibility(homeName) == HomeVisibility.PRIVATE) {
-					throw new FormattedUserException(ChatColor.RED + "Home " + homeName + " not found.");
+					throw new FormattedUserException("Home " + homeName + " not found.");
 				}
 			}
 
 		} else if (args.length >= 3) {
-			throw new FormattedUserException(ChatColor.RED
-					+ "USAGE: /home\n"
-					+ "USAGE: /home <name>\n"
-					+ "USAGE: /home <player> <name>\n");
+			throw new FormattedUserException("USAGE: /home\nUSAGE: /home <name>\nUSAGE: /home <player> <name>\n");
 		}
 
 		// Teleport to the saved location.
@@ -1126,7 +1133,7 @@ public class TPControl extends JavaPlugin implements Listener {
 
 		User u = getUser(p);
 		u.setHome(homeName, p.getLocation(), visibility);
-		p.sendMessage(ChatColor.GRAY + "Home set.");
+		messagePlayer(p, "Home set.");
 		return true;
 	}
 
@@ -1143,24 +1150,24 @@ public class TPControl extends JavaPlugin implements Listener {
 		if (args.length == 1) {
 			String homeName = args[0];
 			getUser(p).deleteHome(homeName);
-			p.sendMessage(ChatColor.GRAY + "Home " + homeName + " cleared.");
+			messagePlayer(p, "Home " + homeName + " cleared.");
 
 			// Delete another's home
 		} else if (args.length == 2) {
 			if (!p.hasPermission("tpcontrol.homeadmin")) {
-				throw new FormattedUserException(ChatColor.RED + "Usage: /delhome <name>");
+				throw new FormattedUserException("Usage: /delhome <name>");
 			}
 			String playerName = args[0];
 			String homeName = args[1];
 			getUser(playerName).deleteHome(homeName);
-			p.sendMessage(ChatColor.GRAY + "Home " + homeName + " cleared.");
+			messagePlayer(p, "Home " + homeName + " cleared.");
 
 			// Invalid arguments
 		} else {
 			if (p.hasPermission("tpcontrol.homeadmin")) {
-				p.sendMessage(ChatColor.RED + "Usage: /delhome [player] <name>");
+				messagePlayer(p, "Usage: /delhome [player] <name>", NamedTextColor.RED);
 			} else {
-				p.sendMessage(ChatColor.RED + "Usage: /delhome <name>");
+				messagePlayer(p, "Usage: /delhome <name>", NamedTextColor.RED);
 			}
 		}
 		return true;
@@ -1189,11 +1196,11 @@ public class TPControl extends JavaPlugin implements Listener {
 			player_desc = u.getUsername();
 		}
 
-		p.sendMessage(ChatColor.GRAY + player_desc + " homes:");
+		messagePlayer(p, player_desc + " homes:");
 		for (String homeName : u.getHomeNames()) {
 			HomeVisibility vis = u.getHomeVisibility(homeName);
 			if (vis == HomeVisibility.PUBLIC || show_unlisted) {
-				p.sendMessage(ChatColor.GRAY + "  " + homeName + " [" + vis.toString() + "]");
+				messagePlayer(p, "  " + homeName + " [" + vis.toString() + "]");
 			}
 		}
 		return true;
@@ -1232,7 +1239,7 @@ public class TPControl extends JavaPlugin implements Listener {
 			uuid = uuidcache.getUUID(name); // NOTE: This can guess partial
 			// names.
 			if (uuid == null) {
-				throw new FormattedUserException(ChatColor.RED + "Cannot find player " + name + ".");
+				throw new FormattedUserException("Cannot find player " + name + ".");
 			}
 			name = uuidcache.getName(uuid); // Get canonical name.
 		} else {
@@ -1277,12 +1284,11 @@ public class TPControl extends JavaPlugin implements Listener {
 	}
 
 	public void messagePlayer(Player p, String m) {
-		messagePlayer(p, m, ChatColor.GRAY);
+		messagePlayer(p, m, NamedTextColor.GRAY);
 	}
 
-	public void messagePlayer(Player p, String m, ChatColor color) {
-		// p.sendMessage(ChatColor.GRAY + "[TP] " + color + m);
-		p.sendMessage(color + m);
+	public void messagePlayer(Player p, String m, NamedTextColor color) {
+		p.sendMessage(Component.text(m, color));
 	}
 
 	private void teleport(Player p1, Player p2) {
@@ -1339,33 +1345,33 @@ public class TPControl extends JavaPlugin implements Listener {
 	 */
 	public void PrettyPrintUUIDList(CommandSender sender, String title, List<String> list) {
 
-		StringBuilder sb = new StringBuilder();
-		sb.append(ChatColor.GOLD);
-		sb.append(title);
-		sb.append(": ");
+		Component prettyUUIDMessage = Component.text(title + ": ", NamedTextColor.GOLD);
+		Component singleUUIDComponent;
 
 		int i = 0;
 		for (String s : list) {
-			if (i % 2 == 0) {
-				sb.append(ChatColor.GRAY);
-			} else {
-				sb.append(ChatColor.WHITE);
-			}
-
 			String name = uuidcache.getName(UUID.fromString(s));
 			if (name != null) {
-				sb.append(name);
+				singleUUIDComponent = Component.text(name);
 			} else {
-				sb.append(s);
+				singleUUIDComponent = Component.text(s);
+			}
+
+			if (i % 2 == 0) {
+				singleUUIDComponent = singleUUIDComponent.color(NamedTextColor.GRAY);
+			} else {
+				singleUUIDComponent = singleUUIDComponent.color(NamedTextColor.WHITE);
 			}
 
 			if (i < list.size() - 1) {
-				sb.append(", ");
+				singleUUIDComponent = singleUUIDComponent.append(Component.text(", ").mergeStyle(singleUUIDComponent));
 			}
+
+			prettyUUIDMessage = prettyUUIDMessage.append(singleUUIDComponent);
 
 			i++;
 		}
-		sender.sendMessage(sb.toString());
+		sender.sendMessage(prettyUUIDMessage);
 	}
 
 	/**
