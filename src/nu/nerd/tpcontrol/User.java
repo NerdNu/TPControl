@@ -31,6 +31,7 @@ public class User {
     private final YamlConfiguration yaml;
     private boolean dirty = false;
     private Location lastLocation;
+    private Location offlineTeleportLocation;
 
     /** Valid characters for homes */
     private static Pattern validChars = Pattern.compile("^[A-Za-z_]+[A-Za-z_0-9]*");
@@ -230,7 +231,7 @@ public class User {
      * 
      * @param name Home name
      * @param loc Location to set
-     * @param visibility Optional visibility
+     * @param vis Optional visibility
      */
     public void setHome(String name, Location loc, HomeVisibility vis) {
         // Get the home
@@ -306,6 +307,24 @@ public class User {
         return homes.values().stream()
         .map(home -> home.getName())
         .collect(Collectors.toSet());
+    }
+
+    /**
+     * Fetches the offline teleport location of the user.
+     * @return the offline teleport location of the user.
+     */
+    public Location getOfflineTeleportLocation() {
+        return this.offlineTeleportLocation;
+    }
+
+    /**
+     * Sets the players offline teleport location, had they been teleported while offline.
+     * @param location The location the player was teleported to.
+     */
+    public void setOfflineTeleportLocation(Location location) {
+        yaml.set("offline_teleport_location", location);
+        this.offlineTeleportLocation = location;
+        dirty = true;
     }
 
     /**

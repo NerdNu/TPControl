@@ -33,8 +33,8 @@ public class Configuration {
     public void load() {
         plugin.reloadConfig();
 
-        MODE_MAP = new HashMap<String, String>();
-        WARPS = new TreeMap<String, Warp>();
+        MODE_MAP = new HashMap<>();
+        WARPS = new TreeMap<>();
 
         String key;
         for(String m : modes) {

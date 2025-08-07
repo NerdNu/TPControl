@@ -1,5 +1,7 @@
 package nu.nerd.tpcontrol;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -32,7 +34,7 @@ public class WarpTask extends BukkitRunnable {
     }
 
     public void run() {
-        this.player.sendMessage(ChatColor.GOLD + "Warping to " + this.warp.getName());
+        this.player.sendMessage(Component.text("Warping to " + this.warp.getName(), NamedTextColor.GOLD));
 
         if (this.warp.doesAllowBack()) {
             User u = this.plugin.getUser(this.player);

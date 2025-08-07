@@ -2,15 +2,7 @@ package nu.nerd.tpcontrol;
 
 import java.io.File;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -30,10 +22,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -56,6 +45,7 @@ public class TPControl extends JavaPlugin implements Listener {
 	private final HashMap<UUID, User> user_cache = new HashMap<UUID, User>();
 	public HashMap<Player, WarpTask> warp_warmups = new HashMap<Player, WarpTask>();
 	private UUIDCache uuidcache = null;
+	private HashMap<UUID, UUID> confirmOfflineTPList = new HashMap<>();
 
 	private WorldGuardPlugin worldGuard = null;
 
@@ -121,6 +111,17 @@ public class TPControl extends JavaPlugin implements Listener {
 			}
 		}
 		return found;
+	}
+
+	@EventHandler
+	public void onPlayerJoin(PlayerJoinEvent event) {
+		Player player = event.getPlayer();
+		User user = getUser(player);
+		if(user.getOfflineTeleportLocation() != null) {
+			player.teleport(user.getOfflineTeleportLocation());
+			user.setOfflineTeleportLocation(null);
+			messagePlayer(player, "You were teleported by a member of staff while you were offline!");
+		}
 	}
 
 	@EventHandler(priority = EventPriority.MONITOR)
@@ -444,11 +445,32 @@ public class TPControl extends JavaPlugin implements Listener {
 
 		Player p1 = getPlayer(args[0]);
 		if (p1 == null) {
-			Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-				if(this.getServer().getOfflinePlayer(args[0]).hasPlayedBefore()) {
+			User beingTeleported = getUser(args[0]);
+			if(beingTeleported != null) {
+				UUID beingTeleportedUUID = beingTeleported.uuid;
+				// If an initial attempt has already gone through
+				if(isAwaitingConfirmation(p2.getUniqueId(), beingTeleportedUUID)) {
+					// Set location and remove from confirmation map
+					beingTeleported.setOfflineTeleportLocation(p2.getLocation());
+					messagePlayer(p2, beingTeleported.getUsername() + " will log in here on next join.");
+					confirmOfflineTPList.remove(beingTeleportedUUID);
+				} else {
+					// Have player confirm they want to teleport an offline player
+					messagePlayer(p2, "The player " + beingTeleported.getUsername() + " is offline. Are you sure you" +
+							" want to teleport them here? Run the command again if yes.", NamedTextColor.RED);
+					confirmOfflineTPList.put(beingTeleported.uuid, p2.getUniqueId());
+					Bukkit.getScheduler().runTaskLater(this, () -> {
+						// If still in the confirmation map
+						if(isAwaitingConfirmation(p2.getUniqueId(), beingTeleportedUUID)) {
 
+							confirmOfflineTPList.remove(beingTeleportedUUID);
+							messagePlayer(p2, "Confirmation for " + beingTeleported.getUsername() + " has expired.");
+
+						}
+					}, 20L * 10L);
 				}
-			});
+				return true;
+			}
 			messagePlayer(p2, "Couldn't find player " + args[0], NamedTextColor.RED);
 			return true;
 		}
@@ -462,6 +484,11 @@ public class TPControl extends JavaPlugin implements Listener {
 			messagePlayer(p2, "You do not have permission.", NamedTextColor.RED);
 			return true;
 		}
+	}
+
+	public boolean isAwaitingConfirmation(UUID p2, UUID p1) {
+		return confirmOfflineTPList.containsKey(p1)
+				&& confirmOfflineTPList.get(p1).equals(p2);
 	}
 
 	/**

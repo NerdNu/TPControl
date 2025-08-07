@@ -4,8 +4,8 @@ description: Simple, configurable, tiered teleport plugin with allow/ask/deny mo
 website: ${project.url}
 author: [Barney Gale, Deaygo, c45y, slide, Challenger2]
 main: nu.nerd.tpcontrol.TPControl
-softdepend: [Vault, WorldGuard, Multiverse-Core]
-api-version: 1.17
+softdepend: [WorldGuard, Multiverse-Core]
+api-version: 1.20
 
 permissions:
     tpcontrol.level.*:
