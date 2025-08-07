@@ -5,6 +5,7 @@ import java.lang.reflect.Constructor;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -33,6 +34,8 @@ import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
 import com.sk89q.worldguard.protection.ApplicableRegionSet;
 import com.sk89q.worldguard.protection.managers.RegionManager;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class TPControl extends JavaPlugin implements Listener {
 
@@ -1408,5 +1411,32 @@ public class TPControl extends JavaPlugin implements Listener {
 	 */
 	public UUIDCache getUUIDCache() {
 		return uuidcache;
+	}
+
+	@Override
+	public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
+		if (command.getName().equalsIgnoreCase("warp")) {
+			if (args.length == 1) {
+				String currentInput = args[0].toLowerCase();
+				return config.WARPS.keySet().stream()
+						.filter(key -> key.toLowerCase().startsWith(currentInput))
+						.sorted()
+						.collect(Collectors.toList());
+			}
+		}
+
+		if(command.getName().equalsIgnoreCase("home")) {
+			if(sender instanceof Player player) {
+				if (args.length == 1) {
+					String currentInput = args[0].toLowerCase();
+					return getUser(player).getHomeNames().stream()
+							.filter(home -> home.toLowerCase().startsWith(currentInput))
+							.sorted()
+							.collect(Collectors.toList());
+				}
+			}
+		}
+
+		return Collections.emptyList();
 	}
 }
