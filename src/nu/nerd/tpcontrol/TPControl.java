@@ -33,8 +33,6 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
-import org.bukkit.plugin.RegisteredServiceProvider;
-import org.bukkit.plugin.SimplePluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
@@ -43,8 +41,6 @@ import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
 import com.sk89q.worldguard.protection.ApplicableRegionSet;
 import com.sk89q.worldguard.protection.managers.RegionManager;
-
-import net.milkbowl.vault.economy.Economy;
 
 public class TPControl extends JavaPlugin implements Listener {
 
@@ -58,21 +54,11 @@ public class TPControl extends JavaPlugin implements Listener {
 	public HashMap<Player, WarpTask> warp_warmups = new HashMap<Player, WarpTask>();
 	private UUIDCache uuidcache = null;
 
-	public Economy economy = null;
 	private WorldGuardPlugin worldGuard = null;
 
 	@Override
 	public void onEnable() {
 		log = this.getLogger();
-
-		// Setup Vault Economy
-		if (getServer().getPluginManager().getPlugin("Vault") != null) {
-			RegisteredServiceProvider<Economy> economyProvider = getServer().getServicesManager()
-					.getRegistration(net.milkbowl.vault.economy.Economy.class);
-			if (economyProvider != null) {
-				this.economy = economyProvider.getProvider();
-			}
-		}
 
 		Plugin plugin = getServer().getPluginManager().getPlugin("WorldGuard");
 		if (plugin != null && plugin instanceof WorldGuardPlugin) {
@@ -775,31 +761,6 @@ public class TPControl extends JavaPlugin implements Listener {
 			return;
 		}
 
-		if (economy != null) {
-			boolean low_en = w1.getBalanceMin() != null;
-			boolean low = low_en;
-			if (low_en) {
-				low = economy.getBalance(p2) >= w1.getBalanceMin();
-			}
-
-			boolean high_en = w1.getBalanceMax() != null;
-			boolean high = high_en;
-			if (high_en) {
-				high = economy.getBalance(p2) <= w1.getBalanceMax();
-			}
-
-			if (low_en && low) {
-				messagePlayer(p2, "Your balance is too low.", ChatColor.RED);
-			}
-			if (high_en && high) {
-				messagePlayer(p2, "Your balance is too high.", ChatColor.RED);
-			}
-
-			if (low_en && !low || high_en && !high) {
-				return;
-			}
-		}
-
 		Date now = new Date();
 		Date p2cd = w1.getCooldown(p2);
 		if (p2cd != null && !now.after(new Date(p2cd.getTime() + w1.getCooldown() * 1000))) {
@@ -972,8 +933,6 @@ public class TPControl extends JavaPlugin implements Listener {
 		getConfig().set("warps." + w1.getName() + ".warmup.cancel-on-move", w1.doesWarmupCancelOnMove());
 		getConfig().set("warps." + w1.getName() + ".warmup.cancel-on-damage", w1.doesWarmupCancelOnDamage());
 		getConfig().set("warps." + w1.getName() + ".cooldown.length", w1.getCooldown());
-		getConfig().set("warps." + w1.getName() + ".economy.balance.min", w1.getBalanceMin());
-		getConfig().set("warps." + w1.getName() + ".economy.balance.max", w1.getBalanceMax());
 		getConfig().set("warps." + w1.getName() + ".shortcuts", w1.getShortcuts());
 		getConfig().set("warps." + w1.getName() + ".allow-back", w1.doesAllowBack());
 		saveConfig();
@@ -1368,17 +1327,7 @@ public class TPControl extends JavaPlugin implements Listener {
 	}
 
 	private CommandMap getCommandMap() {
-		CommandMap commandMap = null;
-		try {
-			if ((Bukkit.getPluginManager() instanceof SimplePluginManager)) {
-				Field f = SimplePluginManager.class.getDeclaredField("commandMap");
-				f.setAccessible(true);
-				commandMap = (CommandMap) f.get(Bukkit.getPluginManager());
-			}
-		} catch (Exception ex) {
-			getLogger().log(Level.WARNING, "exception getting command map", ex);
-		}
-		return commandMap;
+		return this.getServer().getCommandMap();
 	}
 
 	/**
