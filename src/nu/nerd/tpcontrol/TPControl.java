@@ -1437,6 +1437,6 @@ public class TPControl extends JavaPlugin implements Listener {
 			}
 		}
 
-		return Collections.emptyList();
+		return null;
 	}
 }
